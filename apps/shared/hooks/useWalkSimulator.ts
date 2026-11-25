@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { UserPosition3D, Waypoint3D } from "../types/contracts";
+import { buildDetailedStadiumPath, type PathPoint3D } from "../lib/routeGeometry";
 
 export type WalkStatus = "idle" | "walking" | "paused" | "arrived";
 
@@ -22,7 +23,7 @@ export interface UseWalkSimulatorResult {
   resetWalk: () => void;
 }
 
-function headingDegrees(from: Waypoint3D, to: Waypoint3D): number {
+function headingDegrees(from: PathPoint3D, to: PathPoint3D): number {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const rad = Math.atan2(dx, dy);
@@ -55,33 +56,37 @@ export function useWalkSimulator({
     if (waypoints.length < 2) {
       return { items: [], totalLen: 0 };
     }
-    const items: {
-      from: Waypoint3D;
-      to: Waypoint3D;
+    const rawItems: {
+      from: PathPoint3D;
+      to: PathPoint3D;
+      fromWp: Waypoint3D;
+      toWp: Waypoint3D;
       len: number;
-      startFrac: number;
-      endFrac: number;
     }[] = [];
     let total = 0;
-    const lengths = waypoints.slice(0, -1).map((w, idx) => {
-      const nxt = waypoints[idx + 1];
-      const d = Math.hypot(nxt.x - w.x, nxt.y - w.y, nxt.z - w.z);
-      const safe = Math.max(8, d);
-      total += safe;
-      return safe;
-    });
-    let acc = 0;
-    for (let i = 0; i < lengths.length; i++) {
-      const len = lengths[i];
-      items.push({
-        from: waypoints[i],
-        to: waypoints[i + 1],
-        len,
-        startFrac: acc / total,
-        endFrac: (acc + len) / total,
-      });
-      acc += len;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const fromWp = waypoints[i];
+      const toWp = waypoints[i + 1];
+      const subPts = buildDetailedStadiumPath([fromWp, toWp]);
+      for (let j = 0; j < subPts.length - 1; j++) {
+        const a = subPts[j];
+        const b = subPts[j + 1];
+        const d = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+        const safe = Math.max(1.5, d);
+        total += safe;
+        rawItems.push({ from: a, to: b, fromWp, toWp, len: safe });
+      }
     }
+    let acc = 0;
+    const items = rawItems.map((item) => {
+      const startFrac = acc / total;
+      acc += item.len;
+      return {
+        ...item,
+        startFrac,
+        endFrac: acc / total,
+      };
+    });
     return { items, totalLen: total };
   }, [waypoints]);
 
@@ -129,11 +134,11 @@ export function useWalkSimulator({
       const x = seg.from.x + (seg.to.x - seg.from.x) * localT;
       const y = seg.from.y + (seg.to.y - seg.from.y) * localT;
       const z = seg.from.z + (seg.to.z - seg.from.z) * localT;
-      const level = localT < 0.5 ? seg.from.level : seg.to.level;
-      const snapped = localT < 0.5 ? seg.from.node_id : seg.to.node_id;
+      const level = localT < 0.5 ? seg.fromWp.level : seg.toWp.level;
+      const snapped = localT < 0.5 ? seg.fromWp.node_id : seg.toWp.node_id;
 
       return {
-        wp: localT < 0.5 ? seg.from : seg.to,
+        wp: localT < 0.5 ? seg.fromWp : seg.toWp,
         pos: {
           x: Number(x.toFixed(1)),
           y: Number(y.toFixed(1)),

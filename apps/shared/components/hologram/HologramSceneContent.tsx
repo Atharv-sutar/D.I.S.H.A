@@ -19,6 +19,7 @@ import type {
 } from "../../types/contracts";
 import type { DetectedSeatLocation } from "../../lib/seatMapper";
 import { getCongestionVisuals } from "../../lib/congestion";
+import { buildDetailedStadiumPath } from "../../lib/routeGeometry";
 
 export type HologramLayerFilter =
   | "all"
@@ -899,59 +900,112 @@ function WaypointTrail3D({
 
   const curve = useMemo(() => {
     if (waypoints.length < 2) return null;
-    const pts = waypoints.map((wp) => {
-      const [px, py, pz] = toThree(wp.x, wp.y, wp.z + 2.4);
+    const expanded = buildDetailedStadiumPath(waypoints);
+    const pts = expanded.map((wp) => {
+      const [px, py, pz] = toThree(wp.x, wp.y, wp.z + 1.15);
       return new THREE.Vector3(px, py, pz);
     });
-    return new THREE.CatmullRomCurve3(pts);
+    return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.25);
   }, [waypoints]);
 
-  const linePoints = useMemo<[number, number, number][]>(() => {
+  const tubeGeometry = useMemo(() => {
+    if (!curve) return null;
+    return new THREE.TubeGeometry(curve, 96, 0.95, 8, false);
+  }, [curve]);
+
+  const outlinePoints = useMemo<[number, number, number][]>(() => {
     if (!curve) return [];
-    return curve.getPoints(72).map((p) => [p.x, p.y, p.z]);
+    return curve.getPoints(96).map((p) => [p.x, p.y + 0.55, p.z]);
+  }, [curve]);
+
+  const directionArrows = useMemo(() => {
+    if (!curve) return [];
+    const count = 8;
+    const arrows: { pos: [number, number, number]; yaw: number }[] = [];
+    for (let i = 1; i < count; i++) {
+      const t = i / count;
+      const pt = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t);
+      const yaw = Math.atan2(tangent.x, tangent.z);
+      arrows.push({ pos: [pt.x, pt.y + 0.9, pt.z], yaw });
+    }
+    return arrows;
   }, [curve]);
 
   useFrame(({ clock }) => {
     if (pulseDotRef.current && curve) {
-      const t = (clock.getElapsedTime() * 0.26) % 1;
+      const t = (clock.getElapsedTime() * 0.24) % 1;
       const pt = curve.getPointAt(t);
-      pulseDotRef.current.position.copy(pt);
+      pulseDotRef.current.position.set(pt.x, pt.y + 1.1, pt.z);
     }
   });
 
   if (waypoints.length === 0) return null;
 
   const finalWp = waypoints[waypoints.length - 1];
-  const [fx, fy, fz] = toThree(finalWp.x, finalWp.y, finalWp.z + 2);
-  const trailColor = isExitRoute ? "#10b981" : "#fbbf24";
+  const [fx, fy, fz] = toThree(finalWp.x, finalWp.y, finalWp.z + 1.2);
+  const trailColor = isExitRoute ? "#059669" : "#2563eb";
+  const accentColor = isExitRoute ? "#10b981" : "#3b82f6";
 
   return (
     <group>
-      {linePoints.length > 1 && (
-        <Line points={linePoints} color={trailColor} lineWidth={4} />
+      {/* Solid Walkway Corridor Tube */}
+      {tubeGeometry && (
+        <mesh geometry={tubeGeometry}>
+          <meshStandardMaterial
+            color={trailColor}
+            emissive={accentColor}
+            emissiveIntensity={0.35}
+            roughness={0.35}
+            metalness={0.2}
+          />
+        </mesh>
       )}
 
-      {curve && (
-        <mesh ref={pulseDotRef}>
-          <sphereGeometry args={[2.1, 14, 14]} />
+      {/* Crisp Center Guideline */}
+      {outlinePoints.length > 1 && (
+        <Line points={outlinePoints} color="#ffffff" lineWidth={2} />
+      )}
+
+      {/* Directional Arrow Chevrons along the walkway */}
+      {directionArrows.map((arrow, idx) => (
+        <mesh
+          key={`arrow_${idx}`}
+          position={arrow.pos}
+          rotation={[Math.PI / 2, 0, -arrow.yaw]}
+        >
+          <coneGeometry args={[1.15, 2.4, 3]} />
           <meshStandardMaterial
             color="#ffffff"
-            emissive={trailColor}
-            emissiveIntensity={2.4}
+            emissive={accentColor}
+            emissiveIntensity={0.6}
+          />
+        </mesh>
+      ))}
+
+      {/* Moving Walker Guide Dot */}
+      {curve && (
+        <mesh ref={pulseDotRef}>
+          <sphereGeometry args={[1.85, 14, 14]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            emissive={accentColor}
+            emissiveIntensity={1.6}
             toneMapped={false}
           />
         </mesh>
       )}
 
+      {/* Intermediate Waypoint Checkpoints */}
       {waypoints.slice(1, -1).map((wp, idx) => {
-        const [wx, wy, wz] = toThree(wp.x, wp.y, wp.z + 2.4);
+        const [wx, wy, wz] = toThree(wp.x, wp.y, wp.z + 1.5);
         return (
           <mesh key={`wp_${wp.node_id}_${idx}`} position={[wx, wy, wz]}>
-            <octahedronGeometry args={[1.3, 0]} />
+            <cylinderGeometry args={[1.2, 1.2, 1.0, 12]} />
             <meshStandardMaterial
-              color={trailColor}
-              emissive={trailColor}
-              emissiveIntensity={1.1}
+              color="#ffffff"
+              emissive={accentColor}
+              emissiveIntensity={0.8}
             />
           </mesh>
         );
@@ -959,35 +1013,35 @@ function WaypointTrail3D({
 
       {/* Destination Waypoint Pillar */}
       <group position={[fx, fy, fz]}>
-        <mesh position={[0, 12, 0]}>
-          <cylinderGeometry args={[0.35, 0.35, 24, 8]} />
+        <mesh position={[0, 11, 0]}>
+          <cylinderGeometry args={[0.4, 0.4, 22, 8]} />
           <meshStandardMaterial
             color={trailColor}
-            emissive={trailColor}
-            emissiveIntensity={1.6}
+            emissive={accentColor}
+            emissiveIntensity={0.8}
             transparent
-            opacity={0.75}
+            opacity={0.85}
           />
         </mesh>
-        <mesh position={[0, 24.5, 0]}>
-          <octahedronGeometry args={[2.7, 0]} />
+        <mesh position={[0, 23, 0]}>
+          <octahedronGeometry args={[2.5, 0]} />
           <meshStandardMaterial
             color="#ffffff"
-            emissive={trailColor}
-            emissiveIntensity={2.1}
+            emissive={accentColor}
+            emissiveIntensity={1.4}
             toneMapped={false}
           />
         </mesh>
         {showLabels && (
-          <Html center distanceFactor={205} position={[0, 29, 0]}>
+          <Html center distanceFactor={205} position={[0, 28, 0]}>
             <div
-              className={`pointer-events-none whitespace-nowrap rounded-lg border px-2.5 py-1 text-[10px] font-bold shadow-xl ${
+              className={`pointer-events-none whitespace-nowrap rounded border px-2.5 py-1 text-[10px] font-bold shadow-sm ${
                 isExitRoute
-                  ? "border-emerald-300 bg-emerald-950/95 text-emerald-100"
-                  : "border-amber-300 bg-zinc-950/95 text-amber-100"
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-900"
+                  : "border-blue-600 bg-blue-50 text-blue-900"
               }`}
             >
-              {isExitRoute ? "BEST EXIT: " : "WAYPOINT: "}
+              {isExitRoute ? "BEST EXIT: " : "DESTINATION: "}
               {targetLabel ?? finalWp.node_id}
             </div>
           </Html>

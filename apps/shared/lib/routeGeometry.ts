@@ -156,3 +156,77 @@ export function edgePairKey(fromNodeId: string, toNodeId: string): string {
     ? `${fromNodeId}::${toNodeId}`
     : `${toNodeId}::${fromNodeId}`;
 }
+
+export interface PathPoint3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * Expands coarse graph waypoints into a realistic stadium walking path that
+ * follows curved concourse rings, outer perimeter walkways, and radial aisles
+ * instead of cutting straight chords across the pitch or seating stands.
+ */
+export function buildDetailedStadiumPath(
+  waypoints: PathPoint3D[],
+  minSafeRadiusM = 74
+): PathPoint3D[] {
+  if (waypoints.length <= 1) return waypoints;
+
+  const detailed: PathPoint3D[] = [];
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i];
+    const b = waypoints[i + 1];
+    if (i === 0) detailed.push({ x: a.x, y: a.y, z: a.z });
+
+    const r1 = Math.hypot(a.x, a.y);
+    const r2 = Math.hypot(b.x, b.y);
+    const theta1 = Math.atan2(a.y, a.x);
+    const theta2 = Math.atan2(b.y, b.x);
+    let delta = theta2 - theta1;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+
+    const absDeg = Math.abs((delta * 180) / Math.PI);
+    const chordDist = Math.hypot(b.x - a.x, b.y - a.y);
+
+    // If the segment spans a curved stadium arc, interpolate in polar coordinates
+    // and keep the walkway outside the cricket field boundary.
+    if (absDeg > 10 && (r1 >= 65 || r2 >= 65)) {
+      const steps = Math.max(6, Math.ceil(absDeg / 8));
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps;
+        const theta = theta1 + delta * t;
+        // Smoothly interpolate radius, clamping above minSafeRadiusM when sweeping around the bowl
+        const rawR = r1 + (r2 - r1) * t;
+        const r =
+          absDeg > 25 && rawR < minSafeRadiusM
+            ? minSafeRadiusM + Math.sin(t * Math.PI) * 8
+            : rawR;
+        const z = a.z + (b.z - a.z) * t;
+        detailed.push({
+          x: Math.cos(theta) * r,
+          y: Math.sin(theta) * r,
+          z,
+        });
+      }
+    } else if (chordDist > 18) {
+      // Subdivide long radial/ramp segments so level transitions and curves stay smooth
+      const steps = Math.max(3, Math.ceil(chordDist / 12));
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps;
+        detailed.push({
+          x: a.x + (b.x - a.x) * t,
+          y: a.y + (b.y - a.y) * t,
+          z: a.z + (b.z - a.z) * t,
+        });
+      }
+    } else {
+      detailed.push({ x: b.x, y: b.y, z: b.z });
+    }
+  }
+
+  return detailed;
+}
