@@ -115,6 +115,17 @@ def test_http_server_endpoints_end_to_end() -> None:
             assert data["accessible_only"] is True
             assert len(data["waypoints_3d"]) >= 2
             assert data["target_beacon"] is not None
+
+            locate = client.post("/fans/locate", json={"x": -115, "y": 132, "level": 0})
+            assert locate.status_code == 200
+            assert locate.json()["snapped_node_id"] == "transit_cubbon_park_metro"
+
+            coord_route = client.get(
+                "/routing/recommend",
+                params={"user_x": -115, "user_y": 132, "user_level": 0, "target_type": "gate"},
+            )
+            assert coord_route.status_code == 200
+            assert coord_route.json()["origin_node_id"] == "transit_cubbon_park_metro"
     finally:
         server.shutdown()
         server.server_close()

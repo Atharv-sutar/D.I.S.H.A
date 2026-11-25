@@ -131,7 +131,7 @@ class CrowdSimulator:
         self._prev_occupancy: dict[str, int] = {}
         self._bottlenecks: dict[str, _BottleneckConfig] = {}
         self._recently_cleared: set[str] = set()
-        self._cleared_relief: dict[str, int] = {}
+        self._manual_relief: set[str] = set()
         self._phase_just_changed: bool = False
         self._node_map: dict[str, TopologyNode] = {n.id: n for n in self.topology.nodes}
 
@@ -139,6 +139,7 @@ class CrowdSimulator:
         """Switch the active stadium event phase."""
         if phase != self.event_phase:
             self.event_phase = phase
+            self._manual_relief.clear()
             self._phase_just_changed = True
 
     def inject_bottleneck(
@@ -152,17 +153,17 @@ class CrowdSimulator:
             raise KeyError(f"Unknown node_id: {node_id}")
         clamped = float(min(1.0, max(0.0, severity)))
         self._recently_cleared.discard(node_id)
-        self._cleared_relief.pop(node_id, None)
+        self._manual_relief.discard(node_id)
         self._bottlenecks[node_id] = _BottleneckConfig(
             severity=clamped,
             remaining_ticks=duration_ticks,
         )
 
     def clear_bottleneck(self, node_id: str) -> None:
-        """Remove an injected bottleneck and apply temporary optimal relief."""
+        """Remove an injected bottleneck and keep node relieved until phase change or re-injection."""
         if self._bottlenecks.pop(node_id, None) is not None:
             self._recently_cleared.add(node_id)
-            self._cleared_relief[node_id] = 6
+            self._manual_relief.add(node_id)
 
     def sync_bottlenecks(self, bottlenecks: dict[str, float]) -> None:
         """Synchronize active bottlenecks to match an external control map."""
@@ -170,7 +171,7 @@ class CrowdSimulator:
             if node_id not in bottlenecks:
                 del self._bottlenecks[node_id]
                 self._recently_cleared.add(node_id)
-                self._cleared_relief[node_id] = 6
+                self._manual_relief.add(node_id)
         for node_id, severity in bottlenecks.items():
             if node_id in self._node_map:
                 self.inject_bottleneck(node_id, severity=severity, duration_ticks=None)
@@ -197,8 +198,8 @@ class CrowdSimulator:
             elif node.id in self._bottlenecks:
                 bn = self._bottlenecks[node.id]
                 target_ratio = bn.severity
-            elif node.id in self._cleared_relief:
-                target_ratio = float(np.clip(0.22 + noise * 0.5, 0.10, 0.30))
+            elif node.id in self._manual_relief:
+                target_ratio = float(np.clip(0.22 + noise * 0.4, 0.12, 0.28))
 
             target_occ = round(target_ratio * node.capacity)
             prev_occ = self._prev_occupancy.get(node.id, target_occ)
@@ -277,7 +278,6 @@ class CrowdSimulator:
         self._recently_cleared.clear()
         self._phase_just_changed = False
         self._tick_bottlenecks()
-        self._tick_cleared_relief()
 
         return TelemetrySnapshot(
             venue_id=self.topology.venue_id,
@@ -296,12 +296,3 @@ class CrowdSimulator:
                     expired.append(node_id)
         for node_id in expired:
             del self._bottlenecks[node_id]
-
-    def _tick_cleared_relief(self) -> None:
-        expired: list[str] = []
-        for node_id in self._cleared_relief:
-            self._cleared_relief[node_id] -= 1
-            if self._cleared_relief[node_id] <= 0:
-                expired.append(node_id)
-        for node_id in expired:
-            del self._cleared_relief[node_id]

@@ -72,7 +72,8 @@ def test_simulator_clear_bottleneck_relieves_even_during_ingress_surge() -> None
     sim.inject_bottleneck("gate_1_cubbon", severity=0.95)
     sim.step()
     sim.clear_bottleneck("gate_1_cubbon")
-    snap = sim.step()
-    gate = next(n for n in snap.nodes if n.node_id == "gate_1_cubbon")
-    assert gate.congestion_score < 0.35
-    assert gate.status == "optimal"
+    for _ in range(10):
+        snap = sim.step()
+        gate = next(n for n in snap.nodes if n.node_id == "gate_1_cubbon")
+        assert gate.congestion_score < 0.35
+        assert gate.status == "optimal"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import threading
 from dataclasses import asdict
@@ -166,11 +167,20 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
             if path == "/routing/recommend":
                 qs = parse_qs(parsed.query)
                 origin = qs.get("origin", [None])[0]
+                user_x_raw = qs.get("user_x", [None])[0]
+                user_y_raw = qs.get("user_y", [None])[0]
+                user_level_raw = qs.get("user_level", [None])[0]
                 target_type = qs.get("target_type", [None])[0]
                 target_id = qs.get("target_id", [None])[0]
                 route_mode = qs.get("route_mode", [None])[0]
                 accessible_raw = qs.get("accessible", ["false"])[0].lower()
                 accessible_only = accessible_raw in ("1", "true", "yes")
+
+                if not origin and user_x_raw is not None and user_y_raw is not None:
+                    ux = float(user_x_raw)
+                    uy = float(user_y_raw)
+                    ulvl = int(user_level_raw) if user_level_raw is not None else None
+                    origin = _snap_node(runtime, ux, uy, ulvl).id
 
                 if not origin:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "origin is required"})
@@ -195,6 +205,27 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
         def do_POST(self) -> None:
             parsed = urlparse(self.path)
             path = parsed.path
+
+            if path == "/fans/locate":
+                body = self._read_json_body()
+                if "x" not in body or "y" not in body:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": "x and y are required"})
+                    return
+                ux = float(body["x"])
+                uy = float(body["y"])
+                ulvl = int(body["level"]) if body.get("level") is not None else None
+                node = _snap_node(runtime, ux, uy, ulvl)
+                dist = round(math.hypot(node.x - ux, node.y - uy), 2)
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "venue_id": runtime.simulator.topology.venue_id,
+                        "snapped_node_id": node.id,
+                        "nearest_node": node.model_dump(mode="json"),
+                        "distance_to_node_m": dist,
+                    },
+                )
+                return
 
             if path == "/simulation/step":
                 snap, incidents = runtime.step()
@@ -261,6 +292,14 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {path}"})
 
     return IntelligenceHandler
+
+
+def _snap_node(
+    runtime: IntelligenceRuntime, x: float, y: float, level: int | None = None
+):
+    nodes = runtime.simulator.topology.nodes
+    candidates = [n for n in nodes if level is None or n.level == level] or nodes
+    return min(candidates, key=lambda n: math.hypot(n.x - x, n.y - y))
 
 
 def create_server(
