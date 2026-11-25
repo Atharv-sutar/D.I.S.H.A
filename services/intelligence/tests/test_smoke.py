@@ -1,7 +1,6 @@
 """Smoke tests for disha_intelligence scaffold."""
 
 import pytest
-
 from disha_intelligence.engine import compute_congestion_score
 
 

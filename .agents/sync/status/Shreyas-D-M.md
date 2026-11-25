@@ -6,12 +6,22 @@
 - **Branch**: `main`
 
 ## Current State
-- Module scaffold initialized at `services/intelligence/` with Python package layout and baseline contract stubs.
-- Ready for crowd simulator, congestion scoring, optimal wayfinding/routing engine, and emerging incident anomaly detection implementation.
+- Set up Python `.venv` in `services/intelligence/` with `pip install -e ".[dev]"` (`pydantic`, `numpy`, `networkx`, `httpx`, `pytest`, `ruff`).
+- Implemented core intelligence & simulation engine in `services/intelligence/src/disha_intelligence/`:
+  - `models.py`: Pydantic v2 models strictly aligned with `contracts/schemas/` (`StadiumTopology`, `TelemetrySnapshot`, `FanGuidanceResponse`, `AlertIncident`).
+  - `topology.py`: Deterministic 2-level stadium graph (`disha_arena_01`, `levels: [1, 2]`, 28 nodes across gates/concourses/concessions/restrooms/medical/seating/transit, 36 edges including accessible ramps vs. stairs-only transitions).
+  - `simulator.py`: Deterministic seeded `CrowdSimulator` (`pre_event_ingress`, `in_play`, `halftime_surge`, `egress`, `idle`) with configurable bottleneck injection and expiry.
+  - `routing.py`: `networkx`-based `WayfindingEngine` minimizing combined walk + queue wait time, with `accessible_only` filtering, turn-by-turn `steps`, `time_saved_min`, and `alternatives`.
+  - `detector.py`: `IncidentDetector` flagging `queue_surge`, `crowd_bottleneck`, and stalled throughput anomalies with severity, confidence, recommended actions, and per-node cooldown.
+  - `publisher.py`: Async `SimulationPublisher` runner (`python -m disha_intelligence.publisher`) posting `TelemetrySnapshot` to `BACKEND_INGEST_URL` and `AlertIncident` to `BACKEND_INCIDENTS_URL`.
+- Verified with `pytest` (11/11 passing).
 
 ## Active Interfaces Provided
-- Outputs target `contracts/schemas/telemetry_events.schema.json`, `contracts/schemas/alert_incident.schema.json`, and `contracts/schemas/fan_guidance.schema.json`.
+- Importable Python package `disha_intelligence` (`build_default_topology`, `CrowdSimulator`, `WayfindingEngine`, `IncidentDetector`, `SimulationPublisher`).
+- HTTP publisher targeting:
+  - `POST /api/v1/telemetry/ingest` (`TelemetrySnapshot`)
+  - `POST /api/v1/incidents` (`AlertIncident`)
 
 ## Dependencies / Requests for Peers
-- `@Atharv-sutar`: Confirm ingestion endpoint (`/api/v1/telemetry/ingest`) or internal streaming interface for pushing simulation ticks and alerts.
-- `@Ankit-Navi-8294`: None yet; schema fields defined in `contracts/schemas/`.
+- `@Atharv-sutar`: Ready to stream live `TelemetrySnapshot` and `AlertIncident` payloads to `POST /api/v1/telemetry/ingest` and `POST /api/v1/incidents`, and `WayfindingEngine.recommend(...)` can back `GET /api/v1/routing/recommend` once backend endpoints are wired.
+- `@Ankit-Navi-8294`: All `StadiumTopology` nodes include normalized `x`, `y` (`0–1000`) and `level` (`1`, `2`) coordinates for SVG/canvas heatmaps and wayfinding overlays.
