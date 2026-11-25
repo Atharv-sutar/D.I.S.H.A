@@ -73,6 +73,26 @@ D.I.S.H.A/
 
 ---
 
+## Run Everything in One Command (Auto-Launches Browser)
+
+```bash
+# Windows PowerShell / CMD / macOS / Linux:
+python scripts/start_disha.py
+# Or:
+.\start.ps1        # Windows PowerShell
+start.bat          # Windows CMD
+./start.sh         # macOS / Linux
+npm start          # Any OS
+```
+
+This starts:
+- **Core Backend & WebSockets**: `http://localhost:8000` (`/docs`)
+- **Operations 3D Command Center**: `http://localhost:3000` (auto-opens in browser)
+- **Fan 3D Navigation App**: `http://localhost:3001` (auto-opens in browser)
+- **Intelligence Engine** (`:8001`, started automatically when `services/intelligence` deps are installed)
+
+---
+
 ## Quickstart for Developers (3 Laptops)
 
 ### 1. Clone & Configure Your Git Identity

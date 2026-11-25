@@ -48,6 +48,7 @@
     "protected_shared_paths": [
       "contracts/",
       "docs/",
+      "scripts/",
       ".agents/rules/",
       ".agents/skills/",
       ".agents/scripts/",

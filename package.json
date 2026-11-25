@@ -1,0 +1,11 @@
+{
+  "name": "disha-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "D.I.S.H.A. Smart Stadium Operations and Fan Experience Platform",
+  "scripts": {
+    "start": "python scripts/start_disha.py",
+    "dev": "python scripts/start_disha.py",
+    "start:prod": "python scripts/start_disha.py --prod"
+  }
+}
