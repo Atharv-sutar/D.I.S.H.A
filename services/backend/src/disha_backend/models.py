@@ -286,6 +286,7 @@ class FanGuidanceResponse(BaseModel):
 class LocateFanRequest(BaseModel):
     """Exact spatial location query from a fan's device/QR/BLE anchor."""
 
+    fan_id: Optional[str] = None
     x: float
     y: float
     z: Optional[float] = None
@@ -297,7 +298,112 @@ class LocateFanResponse(BaseModel):
     """Resolved 3D fan location and immediate local zone status."""
 
     venue_id: str
+    fan_id: Optional[str] = None
     user_position: UserPosition3D
     nearest_node: StadiumNode
     distance_to_node_m: float
     local_telemetry: Optional[NodeTelemetry] = None
+
+
+class ActiveFanSession(BaseModel):
+    """Tracked fan presence inside the stadium hologram."""
+
+    fan_id: str
+    user_position: UserPosition3D
+    last_seen_at: str
+    active_target_id: Optional[str] = None
+    active_target_type: Optional[NodeType] = None
+    active_route_node_ids: list[str] = Field(default_factory=list)
+
+
+class NodeForecast(BaseModel):
+    """Short-horizon (+5m / +10m) congestion projection for a stadium node."""
+
+    node_id: str
+    current_score: float
+    projected_5m_score: float
+    projected_10m_score: float
+    projected_5m_wait_min: float
+    trend: TrendDirection
+    risk_level: CongestionStatus
+
+
+class ForecastResponse(BaseModel):
+    """Congestion forecast payload across all stadium nodes."""
+
+    venue_id: str
+    source: Literal["intelligence_service", "backend_fallback"]
+    generated_at: str
+    forecasts: list[NodeForecast]
+
+
+class ZoneSummary(BaseModel):
+    """Compact zone ranking item for Operations Command Center."""
+
+    node_id: str
+    name: str
+    type: NodeType
+    level: int
+    congestion_score: float
+    estimated_wait_min: float
+    status: CongestionStatus
+
+
+class OpsOverviewResponse(BaseModel):
+    """Single-call Operations Dashboard KPI summary."""
+
+    venue_id: str
+    venue_name: str
+    timestamp: str
+    event_phase: EventPhase
+    total_attendance_estimate: int
+    active_incident_count: int
+    critical_incident_count: int
+    tracked_fan_count: int
+    average_gate_wait_min: float
+    congested_zones: list[ZoneSummary]
+    recommended_gates: list[ZoneSummary]
+
+
+class HologramNodeState(BaseModel):
+    """Combined 3D node geometry and live telemetry state for hologram rendering."""
+
+    id: str
+    name: str
+    type: NodeType
+    level: int
+    x: float
+    y: float
+    z: float
+    congestion_score: float
+    pulse_intensity: float
+    estimated_wait_min: float
+    queue_length: int
+    status: CongestionStatus
+    active_incident_ids: list[str] = Field(default_factory=list)
+
+
+class HologramFrameResponse(BaseModel):
+    """Unified 3D hologram overlay frame combining nodes, beacons, and live fans."""
+
+    venue_id: str
+    timestamp: str
+    event_phase: EventPhase
+    nodes: list[HologramNodeState]
+    active_incidents: list[AlertIncident]
+    active_fans: list[UserPosition3D]
+
+
+class SimulationPhaseRequest(BaseModel):
+    """Request to switch stadium event phase."""
+
+    phase: EventPhase
+
+
+class BottleneckRequest(BaseModel):
+    """Request to inject or clear a simulated congestion bottleneck."""
+
+    node_id: str
+    severity: float = Field(0.92, ge=0.1, le=1.0)
+    duration_ticks: Optional[int] = None
+    clear: bool = False

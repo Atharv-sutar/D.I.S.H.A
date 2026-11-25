@@ -6,23 +6,22 @@
 - **Branch**: `main`
 
 ## Current State
-- Implemented working FastAPI + WebSocket backend in `services/backend/src/disha_backend/` (`main.py`, `models.py`, `venue_loader.py`, `routing.py`, `state.py`, `ws_manager.py`).
-- Loaded canonical 3D **M. Chinnaswamy Stadium** topology (`contracts/venues/chinnaswamy_stadium.json`) with 26 navigable nodes across levels 0, 1, 2 and full `hologram_spec`.
-- Implemented exact fan 3D location snapping (`POST /api/v1/fans/locate`), congestion-aware Dijkstra routing with game-style `waypoints_3d` (`GET /api/v1/routing/recommend`), incident lifecycle (`GET/POST/PATCH /api/v1/incidents`), live demo ticker (`POST /api/v1/demo/step`), and WebSocket streams (`/ws/ops`, `/ws/fan`).
-- Aligned `/ws/ops` (`telemetry_update`, `incident_created`, `incident_updated`) and `/ws/fan` (`wait_times_update`, `gate_advisory`, `facility_alert` `FanAdvisoryPayload`) envelopes with `apps/shared/types/ws.ts`, plus CORS for ports `3000` & `3001`.
-- Added unit + ASGI end-to-end tests in `services/backend/tests/test_backend.py` and `test_smoke.py`.
+- Implemented full real-time backend application in `services/backend/src/disha_backend/`:
+  - `main.py`: FastAPI app with `lifespan` background WebSocket streamer (`DISHA_AUTO_STREAM=true`), CORS (`3000`, `3001`), CLI entrypoint (`python -m disha_backend.main`), and full REST + WebSocket APIs.
+  - `intelligence_client.py`: Non-blocking HTTP bridge to `services/intelligence/` (`http://localhost:8001`) with automatic fallback when `:8001` is offline.
+  - `state.py`: Rolling telemetry history + `+5m/+10m` fallback forecasting, live fan 3D session tracking (`fan_sessions`), impacted-route reroute detection, demo bottleneck injection/clearing, `build_ops_overview()`, and `build_hologram_frame()`.
+  - `routing.py` & `venue_loader.py`: M. Chinnaswamy Stadium (`chinnaswamy_bengaluru`) 3D coordinate snapping and congestion-aware Dijkstra pathfinding with `waypoints_3d` & `target_beacon`.
+  - `ws_manager.py`: `/ws/ops` and `/ws/fan` live room broadcasting aligned to `apps/shared/types/ws.ts`.
+- Also upgraded `.agents/` for zero-prompt autonomous team sync (`.agents/sync/directives/`, `identify_dev.py --pull` printing pending directives & contract diffs).
 
 ## Active Interfaces Provided
-- `http://localhost:8000/health`
-- `http://localhost:8000/api/v1/venue/topology`
-- `http://localhost:8000/api/v1/telemetry/latest`
-- `http://localhost:8000/api/v1/telemetry/ingest`
-- `http://localhost:8000/api/v1/fans/locate`
-- `http://localhost:8000/api/v1/routing/recommend`
-- `http://localhost:8000/api/v1/incidents`
-- `http://localhost:8000/api/v1/demo/step`
-- `ws://localhost:8000/ws/ops`, `ws://localhost:8000/ws/fan`
+- `GET /health`, `GET /api/v1/venue/topology`, `GET /api/v1/telemetry/latest`, `POST /api/v1/telemetry/ingest`
+- `GET /api/v1/ops/overview`, `GET /api/v1/hologram/frame`, `GET /api/v1/analytics/forecast`
+- `POST /api/v1/fans/locate`, `GET /api/v1/fans/active`, `GET /api/v1/routing/recommend`
+- `GET/POST /api/v1/incidents`, `PATCH /api/v1/incidents/{incident_id}`
+- `POST /api/v1/simulation/phase`, `POST /api/v1/simulation/bottleneck`, `POST /api/v1/demo/step`
+- `WS /ws/ops`, `WS /ws/fan`
 
 ## Dependencies / Requests for Peers
-- `@Shreyas-D-M`: Load `contracts/venues/chinnaswamy_stadium.json` in `services/intelligence/` and stream live ticks + incident alerts into `POST /api/v1/telemetry/ingest` and `POST /api/v1/incidents`.
-- `@Ankit-Navi-8294`: See handoff `.agents/sync/handoffs/20261125-chinnaswamy-3d-hologram-foundation.md` to update `apps/shared/types/contracts.ts` with `z`, `hologram_spec`, `user_position`, `target_beacon`, and `waypoints_3d`, and connect to the working backend on port `8000`.
+- `@Shreyas-D-M`: Check `.agents/sync/directives/Shreyas-D-M.md` — `services/backend/` is live-ready for `SimulationPublisher` ingestion and bridges `/forecast` + `/simulation/*` to `:8001`.
+- `@Ankit-Navi-8294`: Check `.agents/sync/directives/Ankit-Navi-8294.md` and `.agents/sync/handoffs/20261125-Atharv-sutar-live-backend-endpoints.md` to connect `ops-dashboard` & `fan-app` to port `8000` and build the M. Chinnaswamy 3D Hologram UI.

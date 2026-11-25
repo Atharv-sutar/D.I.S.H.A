@@ -1,21 +1,32 @@
-"""In-memory live stadium state store for telemetry and incidents."""
+"""In-memory live stadium state store for telemetry, forecasts, fans, and incidents."""
 
 from __future__ import annotations
 
 import math
+import time
+from collections import deque
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from disha_backend.models import (
+    ActiveFanSession,
     AlertIncident,
     CongestionStatus,
     EventPhase,
+    ForecastResponse,
+    HologramFrameResponse,
+    HologramNodeState,
     IncidentCreateRequest,
     IncidentPatchRequest,
+    NodeForecast,
     NodeTelemetry,
+    NodeType,
+    OpsOverviewResponse,
     Position3D,
     StadiumTopology,
     TelemetrySnapshot,
+    UserPosition3D,
+    ZoneSummary,
 )
 
 
@@ -30,15 +41,21 @@ def _score_to_status(score: float) -> CongestionStatus:
 
 
 class StadiumStateStore:
-    """Holds current M. Chinnaswamy Stadium topology, telemetry, and active incidents."""
+    """Holds current M. Chinnaswamy Stadium topology, telemetry, fans, and active incidents."""
 
     def __init__(self, topology: StadiumTopology) -> None:
         self.topology = topology
         self.node_map = {n.id: n for n in topology.nodes}
         self._tick_count = 0
+        self._last_external_ingest_monotonic: float = 0.0
+        self._bottleneck_overrides: dict[str, float] = {}
+        self._history: deque[TelemetrySnapshot] = deque(maxlen=12)
         self.incidents: dict[str, AlertIncident] = {}
+        self.fan_sessions: dict[str, ActiveFanSession] = {}
+        self._fan_seen_monotonic: dict[str, float] = {}
         self._seed_initial_incidents()
         self.latest_telemetry: TelemetrySnapshot = self._build_seed_telemetry()
+        self._history.append(self.latest_telemetry)
 
     def _seed_initial_incidents(self) -> None:
         now = datetime.now(timezone.utc).isoformat()
@@ -145,7 +162,10 @@ class StadiumStateStore:
             score = base_ratios.get(node.id, 0.30)
             occupancy = int(round(node.capacity * score))
             total_occ += occupancy
-            queue_len = max(0, int(round(occupancy * (0.25 if node.type in ("gate", "concession") else 0.06))))
+            queue_len = max(
+                0,
+                int(round(occupancy * (0.25 if node.type in ("gate", "concession") else 0.06))),
+            )
             wait_min = round(queue_len / max(8.0, node.capacity * 0.03), 1)
             active_ids = inc_map.get(node.id, [])
             pulse = min(1.0, round(score + (0.25 if active_ids else 0.0), 2))
@@ -177,13 +197,21 @@ class StadiumStateStore:
         """Return node_id -> NodeTelemetry lookup."""
         return {t.node_id: t for t in self.latest_telemetry.nodes}
 
-    def ingest_snapshot(self, snapshot: TelemetrySnapshot) -> TelemetrySnapshot:
-        """Store an externally produced telemetry snapshot and attach active incident beacons."""
+    def is_external_intelligence_active(self, window_sec: float = 12.0) -> bool:
+        """Return True if /api/v1/telemetry/ingest received live ticks recently."""
+        if self._last_external_ingest_monotonic <= 0.0:
+            return False
+        return (time.monotonic() - self._last_external_ingest_monotonic) <= window_sec
+
+    def _apply_snapshot(self, snapshot: TelemetrySnapshot, mark_external: bool) -> TelemetrySnapshot:
         inc_map = self._incidents_by_node()
         enriched: list[NodeTelemetry] = []
         for item in snapshot.nodes:
             active_ids = inc_map.get(item.node_id, [])
-            pulse = max(item.pulse_intensity, min(1.0, item.congestion_score + (0.25 if active_ids else 0.0)))
+            pulse = max(
+                item.pulse_intensity,
+                min(1.0, item.congestion_score + (0.25 if active_ids else 0.0)),
+            )
             enriched.append(
                 NodeTelemetry(
                     node_id=item.node_id,
@@ -206,21 +234,63 @@ class StadiumStateStore:
             total_attendance_estimate=snapshot.total_attendance_estimate,
             nodes=enriched,
         )
+        self._history.append(self.latest_telemetry)
+        if mark_external:
+            self._last_external_ingest_monotonic = time.monotonic()
         return self.latest_telemetry
+
+    def ingest_snapshot(self, snapshot: TelemetrySnapshot) -> TelemetrySnapshot:
+        """Store an externally produced telemetry snapshot and attach active incident beacons."""
+        return self._apply_snapshot(snapshot, mark_external=True)
+
+    def set_demo_phase(self, phase: EventPhase) -> TelemetrySnapshot:
+        """Switch demo event phase immediately when running standalone."""
+        return self.step_demo_telemetry(phase=phase)
+
+    def inject_demo_bottleneck(self, node_id: str, severity: float = 0.92) -> TelemetrySnapshot:
+        """Inject a localized demo congestion bottleneck on a node."""
+        if node_id not in self.node_map:
+            raise KeyError(f"Unknown stadium node_id: {node_id}")
+        self._bottleneck_overrides[node_id] = min(0.99, max(0.5, severity))
+        return self.step_demo_telemetry()
+
+    def clear_demo_bottleneck(self, node_id: str) -> TelemetrySnapshot:
+        """Clear a previously injected demo bottleneck."""
+        if node_id not in self.node_map:
+            raise KeyError(f"Unknown stadium node_id: {node_id}")
+        self._bottleneck_overrides.pop(node_id, None)
+        return self.step_demo_telemetry()
 
     def step_demo_telemetry(self, phase: EventPhase | None = None) -> TelemetrySnapshot:
         """Advance deterministic demo telemetry one tick for standalone development."""
         self._tick_count += 1
+        active_phase = phase or self.latest_telemetry.event_phase
+        phase_bias = {
+            "pre_event_ingress": 0.01,
+            "in_play": -0.02,
+            "halftime_surge": 0.03,
+            "egress": 0.015,
+            "idle": -0.04,
+        }.get(active_phase, 0.0)
+
         inc_map = self._incidents_by_node()
         updated_nodes: list[NodeTelemetry] = []
         total_occ = 0
 
         for idx, prev in enumerate(self.latest_telemetry.nodes):
-            wave = 0.04 * math.sin((self._tick_count + idx) * 0.7)
-            next_score = min(0.98, max(0.08, round(prev.congestion_score + wave, 3)))
+            node = self.node_map.get(prev.node_id)
+            if prev.node_id in self._bottleneck_overrides:
+                next_score = self._bottleneck_overrides[prev.node_id]
+            else:
+                wave = 0.035 * math.sin((self._tick_count + idx) * 0.7)
+                type_bias = phase_bias if (node and node.type in ("gate", "concession", "concourse")) else 0.0
+                next_score = min(
+                    0.96,
+                    max(0.08, round(prev.congestion_score + wave + type_bias, 3)),
+                )
+
             occupancy = int(round(prev.capacity * next_score))
             total_occ += occupancy
-            node = self.node_map.get(prev.node_id)
             queue_factor = 0.25 if (node and node.type in ("gate", "concession")) else 0.06
             queue_len = max(0, int(round(occupancy * queue_factor)))
             wait_min = round(queue_len / max(8.0, prev.capacity * 0.03), 1)
@@ -244,14 +314,184 @@ class StadiumStateStore:
                 )
             )
 
-        self.latest_telemetry = TelemetrySnapshot(
+        snap = TelemetrySnapshot(
             venue_id=self.topology.venue_id,
             timestamp=datetime.now(timezone.utc).isoformat(),
-            event_phase=phase or self.latest_telemetry.event_phase,
+            event_phase=active_phase,
             total_attendance_estimate=total_occ,
             nodes=updated_nodes,
         )
-        return self.latest_telemetry
+        return self._apply_snapshot(snap, mark_external=False)
+
+    def register_fan_location(
+        self,
+        fan_id: str,
+        user_position: UserPosition3D,
+    ) -> ActiveFanSession:
+        """Record or refresh a fan's live 3D coordinates inside the stadium."""
+        existing = self.fan_sessions.get(fan_id)
+        session = ActiveFanSession(
+            fan_id=fan_id,
+            user_position=user_position,
+            last_seen_at=datetime.now(timezone.utc).isoformat(),
+            active_target_id=existing.active_target_id if existing else None,
+            active_target_type=existing.active_target_type if existing else None,
+            active_route_node_ids=existing.active_route_node_ids if existing else [],
+        )
+        self.fan_sessions[fan_id] = session
+        self._fan_seen_monotonic[fan_id] = time.monotonic()
+        return session
+
+    def record_fan_route(
+        self,
+        fan_id: str,
+        user_position: UserPosition3D,
+        target_id: str,
+        target_type: NodeType | None,
+        route_node_ids: list[str],
+    ) -> None:
+        """Attach active route waypoints to a tracked fan session for dynamic rerouting."""
+        self.fan_sessions[fan_id] = ActiveFanSession(
+            fan_id=fan_id,
+            user_position=user_position,
+            last_seen_at=datetime.now(timezone.utc).isoformat(),
+            active_target_id=target_id,
+            active_target_type=target_type,
+            active_route_node_ids=route_node_ids,
+        )
+        self._fan_seen_monotonic[fan_id] = time.monotonic()
+
+    def list_active_fans(self, ttl_seconds: float = 900.0) -> list[ActiveFanSession]:
+        """Return currently active tracked fan sessions within TTL."""
+        now_m = time.monotonic()
+        stale_ids = [
+            fid
+            for fid, seen_m in self._fan_seen_monotonic.items()
+            if (now_m - seen_m) > ttl_seconds
+        ]
+        for fid in stale_ids:
+            self._fan_seen_monotonic.pop(fid, None)
+            self.fan_sessions.pop(fid, None)
+        return list(self.fan_sessions.values())
+
+    def impacted_fan_sessions(self, node_id: str) -> list[ActiveFanSession]:
+        """Return active fans whose waypoint trail crosses an impacted node."""
+        return [
+            fan
+            for fan in self.list_active_fans()
+            if node_id in fan.active_route_node_ids
+        ]
+
+    def compute_fallback_forecasts(self) -> ForecastResponse:
+        """Compute simple rolling-window +5m/+10m projections when port 8001 is offline."""
+        snapshots = list(self._history)
+        current_map = self.telemetry_map()
+        prev_map = (
+            {n.node_id: n for n in snapshots[0].nodes} if len(snapshots) > 1 else current_map
+        )
+        items: list[NodeForecast] = []
+        for node in self.topology.nodes:
+            cur = current_map.get(node.id)
+            if not cur:
+                continue
+            prev = prev_map.get(node.id, cur)
+            slope = (cur.congestion_score - prev.congestion_score) / max(1, len(snapshots) - 1)
+            p5 = min(1.0, max(0.05, round(cur.congestion_score + slope * 2.5, 3)))
+            p10 = min(1.0, max(0.05, round(cur.congestion_score + slope * 5.0, 3)))
+            wait5 = round(cur.estimated_wait_min * (p5 / max(0.1, cur.congestion_score)), 1)
+            items.append(
+                NodeForecast(
+                    node_id=node.id,
+                    current_score=cur.congestion_score,
+                    projected_5m_score=p5,
+                    projected_10m_score=p10,
+                    projected_5m_wait_min=wait5,
+                    trend=cur.trend,
+                    risk_level=_score_to_status(max(p5, p10)),
+                )
+            )
+        return ForecastResponse(
+            venue_id=self.topology.venue_id,
+            source="backend_fallback",
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            forecasts=items,
+        )
+
+    def build_ops_overview(self) -> OpsOverviewResponse:
+        """Assemble executive Ops Dashboard summary."""
+        tmap = self.telemetry_map()
+        zones: list[ZoneSummary] = []
+        gate_waits: list[float] = []
+        gates: list[ZoneSummary] = []
+
+        for node in self.topology.nodes:
+            telem = tmap.get(node.id)
+            if not telem:
+                continue
+            summary = ZoneSummary(
+                node_id=node.id,
+                name=node.name,
+                type=node.type,
+                level=node.level,
+                congestion_score=telem.congestion_score,
+                estimated_wait_min=telem.estimated_wait_min,
+                status=telem.status,
+            )
+            zones.append(summary)
+            if node.type == "gate":
+                gate_waits.append(telem.estimated_wait_min)
+                gates.append(summary)
+
+        zones.sort(key=lambda z: z.congestion_score, reverse=True)
+        gates.sort(key=lambda g: (g.congestion_score, g.estimated_wait_min))
+        unresolved = self.list_incidents(include_resolved=False)
+        critical_count = sum(1 for i in unresolved if i.severity in ("high", "critical"))
+
+        return OpsOverviewResponse(
+            venue_id=self.topology.venue_id,
+            venue_name=self.topology.venue_name,
+            timestamp=self.latest_telemetry.timestamp,
+            event_phase=self.latest_telemetry.event_phase,
+            total_attendance_estimate=self.latest_telemetry.total_attendance_estimate or 0,
+            active_incident_count=len(unresolved),
+            critical_incident_count=critical_count,
+            tracked_fan_count=len(self.list_active_fans()),
+            average_gate_wait_min=round(sum(gate_waits) / max(1, len(gate_waits)), 2),
+            congested_zones=zones[:5],
+            recommended_gates=gates[:3],
+        )
+
+    def build_hologram_frame(self) -> HologramFrameResponse:
+        """Assemble unified 3D hologram overlay frame."""
+        tmap = self.telemetry_map()
+        holo_nodes: list[HologramNodeState] = []
+        for node in self.topology.nodes:
+            telem = tmap.get(node.id)
+            holo_nodes.append(
+                HologramNodeState(
+                    id=node.id,
+                    name=node.name,
+                    type=node.type,
+                    level=node.level,
+                    x=node.x,
+                    y=node.y,
+                    z=node.z,
+                    congestion_score=telem.congestion_score if telem else 0.0,
+                    pulse_intensity=telem.pulse_intensity if telem else 0.0,
+                    estimated_wait_min=telem.estimated_wait_min if telem else 0.0,
+                    queue_length=telem.queue_length if telem else 0,
+                    status=telem.status if telem else "optimal",
+                    active_incident_ids=telem.active_incident_ids if telem else [],
+                )
+            )
+        return HologramFrameResponse(
+            venue_id=self.topology.venue_id,
+            timestamp=self.latest_telemetry.timestamp,
+            event_phase=self.latest_telemetry.event_phase,
+            nodes=holo_nodes,
+            active_incidents=self.list_incidents(include_resolved=False),
+            active_fans=[fan.user_position for fan in self.list_active_fans()],
+        )
 
     def list_incidents(self, include_resolved: bool = True) -> list[AlertIncident]:
         """Return incidents sorted newest first."""
@@ -284,7 +524,7 @@ class StadiumStateStore:
             confidence=req.confidence,
         )
         self.incidents[inc_id] = incident
-        self.ingest_snapshot(self.latest_telemetry)
+        self._apply_snapshot(self.latest_telemetry, mark_external=False)
         return incident
 
     def update_incident(self, incident_id: str, patch: IncidentPatchRequest) -> AlertIncident:
@@ -312,5 +552,5 @@ class StadiumStateStore:
             confidence=existing.confidence,
         )
         self.incidents[incident_id] = updated
-        self.ingest_snapshot(self.latest_telemetry)
+        self._apply_snapshot(self.latest_telemetry, mark_external=False)
         return updated

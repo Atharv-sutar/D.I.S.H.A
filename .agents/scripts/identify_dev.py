@@ -120,9 +120,10 @@ def sync_with_remote(pull: bool) -> str:
     return f"Pulled and rebased {behind} commit(s) from origin/main cleanly."
 
 
-def print_peer_sync_summary(active_handle: str | None) -> None:
-    """Display status headlines and open handoffs for cross-agent synchronization."""
+def print_peer_sync_summary(active_handle: str | None, ownership: dict[str, Any]) -> None:
+    """Display status headlines, pending directives, and open handoffs for autonomous sync."""
     status_dir = REPO_ROOT / ".agents" / "sync" / "status"
+    directives_dir = REPO_ROOT / ".agents" / "sync" / "directives"
     handoffs_dir = REPO_ROOT / ".agents" / "sync" / "handoffs"
 
     print("\n--- Peer Agent Sync Status ---")
@@ -136,6 +137,35 @@ def print_peer_sync_summary(active_handle: str | None) -> None:
             ]
             preview = " | ".join(lines[:3]) if lines else "No entries yet."
             print(f"  {status_file.stem} {marker}: {preview}")
+
+    if active_handle:
+        dev_info = ownership["developers"].get(active_handle, {})
+        directive_rel = dev_info.get("directive_file")
+        directive_path = (REPO_ROOT / directive_rel) if directive_rel else (directives_dir / f"{active_handle}.md")
+        print(f"\n--- Your Autonomous Directives ({active_handle}) ---")
+        if directive_path.exists():
+            pending = [
+                ln.strip()
+                for ln in directive_path.read_text(encoding="utf-8").splitlines()
+                if "[PENDING]" in ln or "[IN_PROGRESS]" in ln
+            ]
+            if pending:
+                for item in pending:
+                    print(f"  {item}")
+            else:
+                print("  All queued directives marked [DONE]. Check open handoffs below.")
+        else:
+            print("  (no directive file found)")
+
+        last_self = run_git("log", "-n", "1", "--format=%H", f"--author={active_handle}")
+        if last_self:
+            diff_contracts = run_git(
+                "diff", "--name-only", f"{last_self}..HEAD", "--", "contracts/", ".agents/sync/"
+            )
+            if diff_contracts:
+                print("\n--- Contracts/Sync Changed Since Your Last Commit ---")
+                for changed_path in diff_contracts.splitlines():
+                    print(f"  * {changed_path}")
 
     print("\n--- Recent Contract Handoffs ---")
     if handoffs_dir.exists():
@@ -198,7 +228,7 @@ def main() -> int:
         for line in recent_commits.splitlines():
             print(f"  {line}")
 
-    print_peer_sync_summary(handle)
+    print_peer_sync_summary(handle, ownership)
     return 0
 
 

@@ -13,7 +13,7 @@ description: "Automatically detect the active developer on this laptop and stric
    - **`Atharv-sutar`** may ONLY create, modify, or delete code inside `services/backend/`.
    - **`Shreyas-D-M`** may ONLY create, modify, or delete code inside `services/intelligence/`.
    - **`Ankit-Navi-8294`** may ONLY create, modify, or delete code inside `apps/`.
-   - Each developer may ONLY edit **their own** `.agents/sync/status/<github-username>.md` file and create new dated files in `.agents/sync/handoffs/`.
+   - Each developer may ONLY edit **their own** `.agents/sync/status/<github-username>.md` and `.agents/sync/directives/<github-username>.md` files, plus create new dated files in `.agents/sync/handoffs/`.
 
 3. **Zero Cross-Boundary Edits**:
    - NEVER edit, refactor, or delete files inside another developer's owned folder—even to fix a bug or integration mismatch—unless the user explicitly grants a one-time override in chat.

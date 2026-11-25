@@ -5,12 +5,12 @@ description: "MANDATORY: Always pull latest Git changes before starting any new 
 
 # Git Sync & Push Workflow Rules
 
-1. **MANDATORY Pull Before Starting Any New Task**:
-   - Before writing code, designing plans, or starting **any** new task, you MUST sync with GitHub first:
-     1. Run `git fetch origin` and `git status -sb`.
-     2. Run `git pull --rebase origin main` (or `python .agents/scripts/identify_dev.py --pull`) whenever the working tree is clean so you always build on top of teammates' latest commits.
-     3. If the working tree has local uncommitted changes and `origin/main` is ahead, tell the user and stash (`git stash push -m "wip"`) + `git pull --rebase origin main` + `git stash pop` (or commit owned WIP first) before starting the new task.
-     4. Inspect recent remote commits (`git log -n 8 --oneline origin/main`), read all three files in `.agents/sync/status/` (`Atharv-sutar.md`, `Shreyas-D-M.md`, `Ankit-Navi-8294.md`), and check `.agents/sync/handoffs/` for open cross-module requests.
+1. **MANDATORY Pull & Zero-Prompt Auto-Plan Before Starting Any New Task**:
+   - Before writing code, designing plans, or starting **any** new task (even if the user only says `"continue"`, `"sync"`, `"start"`, or `"work on my part"`), you MUST sync with GitHub automatically:
+     1. Run `python .agents/scripts/identify_dev.py --pull` (which fetches `origin`, runs `git pull --rebase origin main` when clean, identifies you, and prints pending directives & open handoffs).
+     2. If the working tree has local uncommitted changes and `origin/main` is ahead, tell the user and stash (`git stash push -m "wip"`) + `git pull --rebase origin main` + `git stash pop` (or commit owned WIP first) before starting the new task.
+     3. Read `.agents/sync/directives/<your-github-handle>.md`, all three `.agents/sync/status/*.md` files, any open `.agents/sync/handoffs/*.md` files targeting your layer, and inspect any `contracts/` changes since your last commit.
+     4. **Proceed autonomously without needing a prompt from another developer's PC**: pick the highest-priority `[PENDING]` directive or open handoff targeted to you and execute it inside your owned directory.
 
 2. **Verify Boundaries & Tests Before Commit**:
    - Run `python .agents/scripts/check_boundaries.py` before staging/committing to ensure no files outside the active developer's owned paths were modified.

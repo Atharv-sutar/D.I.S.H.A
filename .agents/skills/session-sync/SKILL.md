@@ -26,10 +26,9 @@ Run this workflow **before starting any new task**, when opening the workspace, 
    git log -n 10 --oneline origin/main
    ```
 
-3. **Read Peer Sync Logs & Handoffs**:
-   Read all three files in `.agents/sync/status/` and check `.agents/sync/handoffs/` for open cross-module requests targeting your layer.
+3. **Read Directives, Peer Sync Logs & Handoffs**:
+   Read `.agents/sync/directives/<your-github-handle>.md`, all three files in `.agents/sync/status/`, and `.agents/sync/handoffs/` for open cross-module requests targeting your layer.
 
-4. **Report Sync Summary**:
-   Briefly inform the user:
-   - Who is active, whether local branch is up to date with `origin/main`, and which directory is unlocked (`services/backend/`, `services/intelligence/`, or `apps/`).
-   - Recent progress from the other two teammates and any pending contract handoffs.
+4. **Proceed Autonomously (Zero-Prompt Workflow)**:
+   - Never wait for manual prompts sent from another developer's laptop.
+   - Briefly state who is active, what teammates changed since your last commit, and immediately begin executing the top `[PENDING]` / `[IN_PROGRESS]` directive or open handoff for your module.

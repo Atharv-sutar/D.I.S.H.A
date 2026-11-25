@@ -11,6 +11,7 @@
       "stack": ["Python", "FastAPI", "WebSockets", "Pydantic", "Redis"],
       "owned_paths": ["services/backend/"],
       "status_file": ".agents/sync/status/Atharv-sutar.md",
+      "directive_file": ".agents/sync/directives/Atharv-sutar.md",
       "aliases": ["atharv-sutar", "atharv sutar", "atharv"],
       "emails": ["atharvsutar270@gmail.com"]
     },
@@ -22,6 +23,7 @@
       "stack": ["Python", "NumPy", "NetworkX", "Crowd Simulation", "Anomaly Detection"],
       "owned_paths": ["services/intelligence/"],
       "status_file": ".agents/sync/status/Shreyas-D-M.md",
+      "directive_file": ".agents/sync/directives/Shreyas-D-M.md",
       "aliases": ["shreyas-d-m", "shreyas dm", "shreyas"],
       "emails": []
     },
@@ -33,12 +35,14 @@
       "stack": ["TypeScript", "Next.js", "React", "Tailwind CSS", "WebSocket Client"],
       "owned_paths": ["apps/"],
       "status_file": ".agents/sync/status/Ankit-Navi-8294.md",
+      "directive_file": ".agents/sync/directives/Ankit-Navi-8294.md",
       "aliases": ["ankit-navi-8294", "ankit navi", "ankit"],
       "emails": []
     }
   },
   "shared_coordination": {
     "handoffs_dir": ".agents/sync/handoffs/",
+    "directives_dir": ".agents/sync/directives/",
     "contracts_dir": "contracts/",
     "docs_dir": "docs/",
     "protected_shared_paths": [
@@ -51,6 +55,7 @@
       ".agents/TEAM.md",
       ".agents/README.md",
       ".agents/sync/README.md",
+      ".agents/sync/directives/README.md",
       ".github/",
       "AGENTS.md",
       "GEMINI.md",

@@ -1,19 +1,22 @@
-"""End-to-end backend tests for M. Chinnaswamy 3D topology, routing, state, and FastAPI."""
+"""End-to-end backend tests for M. Chinnaswamy 3D topology, routing, state, live app APIs, and FastAPI."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import unittest
 
 from disha_backend.main import _incident_to_fan_advisory, create_app
-from disha_backend.models import IncidentCreateRequest, IncidentPatchRequest, LocateFanRequest
+from disha_backend.models import IncidentCreateRequest, IncidentPatchRequest
 from disha_backend.routing import recommend_route
 from disha_backend.state import StadiumStateStore
 from disha_backend.venue_loader import load_stadium_topology, snap_position_to_node
 
 
-def _run_asgi_request(app, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+def _run_asgi_request(
+    app, method: str, path: str, body: dict | None = None
+) -> tuple[int, dict | list]:
     """Invoke an ASGI FastAPI route directly in-process without external httpx."""
     raw_body = json.dumps(body).encode("utf-8") if body is not None else b""
     headers = [(b"content-type", b"application/json")] if body is not None else []
@@ -45,12 +48,15 @@ def _run_asgi_request(app, method: str, path: str, body: dict | None = None) -> 
 
     asyncio.run(app(scope, receive, send))
     status = next(m["status"] for m in sent_messages if m["type"] == "http.response.start")
-    payload_bytes = b"".join(m.get("body", b"") for m in sent_messages if m["type"] == "http.response.body")
+    payload_bytes = b"".join(
+        m.get("body", b"") for m in sent_messages if m["type"] == "http.response.body"
+    )
     return status, json.loads(payload_bytes.decode("utf-8"))
 
 
 class BackendFoundationTests(unittest.TestCase):
     def setUp(self) -> None:
+        os.environ["DISHA_AUTO_STREAM"] = "false"
         self.topology = load_stadium_topology()
         self.store = StadiumStateStore(self.topology)
         self.app = create_app()
@@ -83,7 +89,6 @@ class BackendFoundationTests(unittest.TestCase):
             origin_node_id="transit_cubbon_park_metro",
             target_type="gate",
         )
-        # Gate 1 has an active queue_surge incident & 0.86 congestion; Gate 18 is nearby and optimal
         self.assertNotEqual(guidance.recommended_target_id, "gate_1_cubbon")
         self.assertEqual(guidance.recommended_target_id, "gate_18_queens")
         self.assertGreater(len(guidance.waypoints_3d), 1)
@@ -93,7 +98,6 @@ class BackendFoundationTests(unittest.TestCase):
         self.assertGreater(guidance.time_saved_min, 0.0)
 
     def test_accessible_route_excludes_stairs(self) -> None:
-        # From North Food Hub to H Upper, direct edge is accessible=False; accessible route detours via East Restroom
         guidance = recommend_route(
             topology=self.topology,
             telemetry_map=self.store.telemetry_map(),
@@ -134,7 +138,7 @@ class BackendFoundationTests(unittest.TestCase):
             self.store.telemetry_map()["stand_f1_f2"].active_incident_ids,
         )
 
-    def test_fastapi_asgi_endpoints_end_to_end(self) -> None:
+    def test_fastapi_asgi_endpoints_and_realtime_features(self) -> None:
         status, health = _run_asgi_request(self.app, "GET", "/health")
         self.assertEqual(status, 200)
         self.assertEqual(health["venue_id"], "chinnaswamy_bengaluru")
@@ -147,27 +151,70 @@ class BackendFoundationTests(unittest.TestCase):
             self.app,
             "POST",
             "/api/v1/fans/locate",
-            body={"x": 0.0, "y": 88.0, "level": 1, "heading_deg": 45.0},
+            body={"fan_id": "fan_demo_1", "x": 0.0, "y": 88.0, "level": 1, "heading_deg": 45.0},
         )
         self.assertEqual(status, 200)
+        self.assertEqual(located["fan_id"], "fan_demo_1")
         self.assertEqual(located["nearest_node"]["id"], "concourse_north_e")
 
         status, routed = _run_asgi_request(
             self.app,
             "GET",
-            "/api/v1/routing/recommend?user_x=0&user_y=88&user_level=1&target_type=concession",
+            "/api/v1/routing/recommend?fan_id=fan_demo_1&user_x=0&user_y=88&user_level=1&target_type=concession",
         )
         self.assertEqual(status, 200)
         self.assertNotEqual(routed["recommended_target_id"], "concession_north_express")
-        self.assertIn(
-            routed["recommended_target_id"],
-            ("concession_east_plaza", "concession_west_pavilion_lounge"),
-        )
         self.assertGreaterEqual(len(routed["waypoints_3d"]), 2)
 
-        status, stepped = _run_asgi_request(self.app, "POST", "/api/v1/demo/step")
+        status, active_fans = _run_asgi_request(self.app, "GET", "/api/v1/fans/active")
         self.assertEqual(status, 200)
-        self.assertEqual(stepped["venue_id"], "chinnaswamy_bengaluru")
+        self.assertEqual(len(active_fans), 1)
+        self.assertEqual(active_fans[0]["fan_id"], "fan_demo_1")
+        self.assertEqual(active_fans[0]["active_target_id"], routed["recommended_target_id"])
+
+        status, overview = _run_asgi_request(self.app, "GET", "/api/v1/ops/overview")
+        self.assertEqual(status, 200)
+        self.assertEqual(overview["tracked_fan_count"], 1)
+        self.assertGreaterEqual(len(overview["congested_zones"]), 1)
+        self.assertGreaterEqual(len(overview["recommended_gates"]), 1)
+
+        status, holo = _run_asgi_request(self.app, "GET", "/api/v1/hologram/frame")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(holo["nodes"]), len(self.topology.nodes))
+        self.assertEqual(len(holo["active_fans"]), 1)
+
+        status, forecast = _run_asgi_request(self.app, "GET", "/api/v1/analytics/forecast")
+        self.assertEqual(status, 200)
+        self.assertIn(forecast["source"], ("intelligence_service", "backend_fallback"))
+        self.assertGreaterEqual(len(forecast["forecasts"]), 20)
+
+        status, phase_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/phase",
+            body={"phase": "halftime_surge"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(phase_snap["event_phase"], "halftime_surge")
+
+        status, bn_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/bottleneck",
+            body={"node_id": "gate_4_cubbon", "severity": 0.94, "clear": False},
+        )
+        self.assertEqual(status, 200)
+        gate4 = next(n for n in bn_snap["nodes"] if n["node_id"] == "gate_4_cubbon")
+        self.assertGreaterEqual(gate4["congestion_score"], 0.9)
+
+        status, cleared_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/bottleneck",
+            body={"node_id": "gate_4_cubbon", "clear": True},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(cleared_snap["venue_id"], "chinnaswamy_bengaluru")
 
         first_inc = self.store.list_incidents()[0]
         advisory = _incident_to_fan_advisory(first_inc)

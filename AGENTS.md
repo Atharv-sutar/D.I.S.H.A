@@ -13,12 +13,14 @@ Before beginning any new task, feature, bugfix, or exploration in this repositor
    - Run `git fetch origin` and check `git status -sb`.
    - If the working tree is clean, immediately run `git pull --rebase origin main` (or use `python .agents/scripts/identify_dev.py --pull`).
    - If uncommitted local changes prevent rebasing, stash or resolve them cleanly (never discard user work silently) and sync with `origin/main` before starting the new task.
-3. **Read teammate sync context** after pulling:
-   - `.agents/sync/status/Atharv-sutar.md`
-   - `.agents/sync/status/Shreyas-D-M.md`
-   - `.agents/sync/status/Ankit-Navi-8294.md`
+3. **Read teammate sync context & self-serve directives after pulling**:
+   - `.agents/sync/directives/<your-github-handle>.md` (your queued autonomous tasks)
+   - `.agents/sync/status/Atharv-sutar.md`, `.agents/sync/status/Shreyas-D-M.md`, `.agents/sync/status/Ankit-Navi-8294.md`
    - Recent files in `.agents/sync/handoffs/`
    - Relevant schemas & venues in `contracts/`
+4. **Zero-Prompt Autonomous Continuation**:
+   - Do NOT wait for manual cross-laptop copy-paste prompts from teammates.
+   - Automatically derive your next action from open handoffs targeted to you, `contracts/` updates since your last commit, and `[PENDING]` tasks in `.agents/sync/directives/<your-github-handle>.md`, then proceed directly within your owned folder.
 
 ## Hard Module Ownership Boundaries
 

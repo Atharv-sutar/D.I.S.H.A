@@ -100,6 +100,7 @@ def main() -> int:
     dev = ownership["developers"][handle]
     owned_paths: list[str] = dev["owned_paths"]
     own_status_file: str = dev["status_file"]
+    own_directive_file: str = dev.get("directive_file", f".agents/sync/directives/{handle}.md")
     handoffs_dir: str = ownership["shared_coordination"]["handoffs_dir"]
     protected_shared: list[str] = ownership["shared_coordination"]["protected_shared_paths"]
 
@@ -113,20 +114,27 @@ def main() -> int:
     allowed_files: list[str] = []
 
     for status_code, path in changed:
-        # 1. Hard block: peer owned directories or peer status files
+        # 1. Hard block: peer owned directories, peer status files, or peer directive files
         violated_peer = None
         for other_handle, other_info in ownership["developers"].items():
             if other_handle == handle:
                 continue
-            if starts_with_any(path, other_info["owned_paths"]) or path == other_info["status_file"]:
+            other_directive = other_info.get(
+                "directive_file", f".agents/sync/directives/{other_handle}.md"
+            )
+            if (
+                starts_with_any(path, other_info["owned_paths"])
+                or path == other_info["status_file"]
+                or path == other_directive
+            ):
                 violated_peer = other_handle
                 break
         if violated_peer:
             peer_violations.append(f"  - {path} (owned by {violated_peer})")
             continue
 
-        # 2. Always allow own module paths & own status file
-        if starts_with_any(path, owned_paths) or path == own_status_file:
+        # 2. Always allow own module paths, own status file, & own directive file
+        if starts_with_any(path, owned_paths) or path in (own_status_file, own_directive_file):
             allowed_files.append(path)
             continue
 
