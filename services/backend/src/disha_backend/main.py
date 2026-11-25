@@ -354,14 +354,28 @@ def create_app() -> FastAPI:
             duration_ticks=req.duration_ticks,
             clear=req.clear,
         )
+        resolved_incidents = []
         try:
             if req.clear:
-                updated = store.clear_demo_bottleneck(req.node_id)
+                updated, resolved_incidents = store.clear_demo_bottleneck(req.node_id)
             else:
                 updated = store.inject_demo_bottleneck(req.node_id, severity=req.severity)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         await _broadcast_telemetry(updated)
+        for inc in resolved_incidents:
+            await ws_manager.broadcast("ops", "incident_updated", model_to_dict(inc))
+        return updated
+
+    @application.post("/api/v1/simulation/clear-all", response_model=TelemetrySnapshot, tags=["simulation"])
+    async def clear_all_simulation_congestion() -> TelemetrySnapshot:
+        """Clear congestion across every stadium node and broadcast optimal state."""
+        for node in store.topology.nodes:
+            await intel_client.set_bottleneck(node_id=node.id, clear=True)
+        updated, resolved_incidents = store.clear_all_demo_congestion()
+        await _broadcast_telemetry(updated)
+        for inc in resolved_incidents:
+            await ws_manager.broadcast("ops", "incident_updated", model_to_dict(inc))
         return updated
 
     @application.get("/api/v1/simulation/status", response_model=SimulationStatusResponse, tags=["simulation"])

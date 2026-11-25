@@ -360,15 +360,13 @@ export function useOpsStream(): UseOpsStreamResult {
       );
       setLastUpdatedAt(now);
 
-      if (connectionStatus === "live") {
-        try {
-          await controlBottleneck({ node_id: nodeId, clear: true });
-        } catch {
-          // Local clear remains active
-        }
+      try {
+        await controlBottleneck({ node_id: nodeId, clear: true });
+      } catch {
+        // Local clear remains active if backend is offline
       }
     },
-    [connectionStatus]
+    []
   );
 
   return {

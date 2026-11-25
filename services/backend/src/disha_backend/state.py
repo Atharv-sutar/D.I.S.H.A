@@ -281,7 +281,7 @@ class StadiumStateStore:
         self._bottleneck_overrides[node_id] = min(0.99, max(0.05, severity))
         return self.step_demo_telemetry()
 
-    def clear_demo_bottleneck(self, node_id: str) -> TelemetrySnapshot:
+    def clear_demo_bottleneck(self, node_id: str) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
         """Clear a previously injected demo bottleneck and restore optimal baseline."""
         if node_id not in self.node_map:
             raise KeyError(f"Unknown stadium node_id: {node_id}")
@@ -289,9 +289,14 @@ class StadiumStateStore:
         self._cleared_nodes.add(node_id)
         for node_telem in self.latest_telemetry.nodes:
             if node_telem.node_id == node_id:
-                node_telem.congestion_score = 0.22
+                node_telem.congestion_score = 0.20
+                node_telem.occupancy = int(round(node_telem.capacity * 0.20))
+                node_telem.queue_length = 0
+                node_telem.estimated_wait_min = 1.0
                 node_telem.status = "optimal"
                 break
+        resolved_incidents: list[AlertIncident] = []
+        now = datetime.now(timezone.utc).isoformat()
         for inc in self.incidents.values():
             if (
                 inc.node_id == node_id
@@ -299,7 +304,28 @@ class StadiumStateStore:
                 and inc.category in ("queue_surge", "crowd_bottleneck")
             ):
                 inc.status = "resolved"
-        return self.step_demo_telemetry()
+                inc.updated_at = now
+                resolved_incidents.append(inc)
+        return self.step_demo_telemetry(), resolved_incidents
+
+    def clear_all_demo_congestion(self) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
+        """Clear congestion across all stadium nodes and resolve all congestion incidents."""
+        self._bottleneck_overrides.clear()
+        self._cleared_nodes = set(self.node_map.keys())
+        for node_telem in self.latest_telemetry.nodes:
+            node_telem.congestion_score = 0.20
+            node_telem.occupancy = int(round(node_telem.capacity * 0.20))
+            node_telem.queue_length = 0
+            node_telem.estimated_wait_min = 1.0
+            node_telem.status = "optimal"
+        resolved_incidents: list[AlertIncident] = []
+        now = datetime.now(timezone.utc).isoformat()
+        for inc in self.incidents.values():
+            if inc.status != "resolved" and inc.category in ("queue_surge", "crowd_bottleneck"):
+                inc.status = "resolved"
+                inc.updated_at = now
+                resolved_incidents.append(inc)
+        return self.step_demo_telemetry(), resolved_incidents
 
     def reset_demo_state(self) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
         """Reset all bottlenecks and restore baseline M. Chinnaswamy state."""

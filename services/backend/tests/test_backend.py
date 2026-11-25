@@ -287,6 +287,14 @@ class BackendFoundationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(preset_snap["event_phase"], "in_play")
 
+        status, clear_all_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/clear-all",
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(all(n["status"] == "optimal" for n in clear_all_snap["nodes"]))
+
         status, reset_snap = _run_asgi_request(self.app, "POST", "/api/v1/simulation/reset")
         self.assertEqual(status, 200)
         self.assertEqual(reset_snap["event_phase"], "pre_event_ingress")

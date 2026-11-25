@@ -16,6 +16,7 @@ import {
 import { useOpsStream } from "@shared/hooks/useOpsStream";
 import {
   applySimulationPreset,
+  clearAllSimulationCongestion,
   controlBottleneck,
   createIncident,
   fetchSimulationStatus,
@@ -404,9 +405,21 @@ export default function SimulatorStudioPage() {
                 onClick={handleClearCongestion}
                 className="inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Clear Congestion
+                <RefreshCw className="h-3.5 w-3.5" /> Clear Selected
               </button>
             </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void runAction("Cleared congestion across all stadium zones", () =>
+                  clearAllSimulationCongestion()
+                )
+              }
+              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-emerald-400 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Clear All Congestion (Whole Stadium)
+            </button>
           </section>
 
           {/* Unusual Activity / Incident Injector */}

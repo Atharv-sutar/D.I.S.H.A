@@ -154,6 +154,14 @@ export async function resetSimulationState(
   });
 }
 
+export async function clearAllSimulationCongestion(
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/clear-all`, {
+    method: "POST",
+  });
+}
+
 export interface SimulationStatusResponse {
   venue_id: string;
   event_phase: EventPhase;
