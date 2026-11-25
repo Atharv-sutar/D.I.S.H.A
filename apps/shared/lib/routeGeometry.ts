@@ -191,20 +191,17 @@ export function buildDetailedStadiumPath(
 
     const absDeg = Math.abs((delta * 180) / Math.PI);
     const chordDist = Math.hypot(b.x - a.x, b.y - a.y);
+    const sameElevation = Math.abs(a.z - b.z) < 0.5;
+    const sameRingRadius = Math.abs(r1 - r2) <= 12;
 
-    // If the segment spans a curved stadium arc, interpolate in polar coordinates
-    // and keep the walkway outside the cricket field boundary.
-    if (absDeg > 10 && (r1 >= 65 || r2 >= 65)) {
+    // Only curve along circular concourse/perimeter rings at constant elevation & radius.
+    // Radial gate passages and ramps stay straight so paths pass directly through gate arches.
+    if (sameElevation && sameRingRadius && absDeg > 10 && r1 >= 68 && r2 >= 68) {
       const steps = Math.max(6, Math.ceil(absDeg / 8));
       for (let s = 1; s <= steps; s++) {
         const t = s / steps;
         const theta = theta1 + delta * t;
-        // Smoothly interpolate radius, clamping above minSafeRadiusM when sweeping around the bowl
-        const rawR = r1 + (r2 - r1) * t;
-        const r =
-          absDeg > 25 && rawR < minSafeRadiusM
-            ? minSafeRadiusM + Math.sin(t * Math.PI) * 8
-            : rawR;
+        const r = r1 + (r2 - r1) * t;
         const z = a.z + (b.z - a.z) * t;
         detailed.push({
           x: Math.cos(theta) * r,

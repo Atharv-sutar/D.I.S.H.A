@@ -928,20 +928,20 @@ function WaypointTrail3D({
     const expanded = buildDetailedStadiumPath(rawPts);
     if (expanded.length < 2) return null;
     const pts = expanded.map((wp) => {
-      const [px, py, pz] = toThree(wp.x, wp.y, wp.z + 1.15);
+      const [px, py, pz] = toThree(wp.x, wp.y, wp.z + 0.55);
       return new THREE.Vector3(px, py, pz);
     });
-    return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.25);
+    return new THREE.CatmullRomCurve3(pts, false, "centripetal");
   }, [waypoints, userPosition]);
 
   const tubeGeometry = useMemo(() => {
     if (!curve) return null;
-    return new THREE.TubeGeometry(curve, 96, 0.95, 8, false);
+    return new THREE.TubeGeometry(curve, 96, 0.65, 8, false);
   }, [curve]);
 
   const outlinePoints = useMemo<[number, number, number][]>(() => {
     if (!curve) return [];
-    return curve.getPoints(96).map((p) => [p.x, p.y + 0.55, p.z]);
+    return curve.getPoints(96).map((p) => [p.x, p.y + 0.35, p.z]);
   }, [curve]);
 
   const directionArrows = useMemo(() => {
@@ -953,7 +953,7 @@ function WaypointTrail3D({
       const pt = curve.getPointAt(t);
       const tangent = curve.getTangentAt(t);
       const yaw = Math.atan2(tangent.x, tangent.z);
-      arrows.push({ pos: [pt.x, pt.y + 0.9, pt.z], yaw });
+      arrows.push({ pos: [pt.x, pt.y + 0.55, pt.z], yaw });
     }
     return arrows;
   }, [curve]);
@@ -962,7 +962,7 @@ function WaypointTrail3D({
     if (pulseDotRef.current && curve) {
       const t = (clock.getElapsedTime() * 0.24) % 1;
       const pt = curve.getPointAt(t);
-      pulseDotRef.current.position.set(pt.x, pt.y + 1.1, pt.z);
+      pulseDotRef.current.position.set(pt.x, pt.y + 0.65, pt.z);
     }
   });
 
@@ -1241,8 +1241,7 @@ export function HologramSceneContent({
     e.stopPropagation();
     const wx = e.point.x;
     const wy = -e.point.z;
-    const radius = Math.hypot(wx, wy);
-    const inferredLevel = radius > 103 ? 0 : radius > 72 ? 1 : 0;
+    const inferredLevel = e.point.y >= 10 ? 2 : e.point.y >= 3.5 ? 1 : 0;
     onPlaceUser(wx, wy, inferredLevel);
   };
 
