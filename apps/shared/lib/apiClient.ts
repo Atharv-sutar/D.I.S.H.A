@@ -154,6 +154,37 @@ export async function resetSimulationState(
   });
 }
 
+export interface SimulationStatusResponse {
+  venue_id: string;
+  event_phase: EventPhase;
+  tick_count: number;
+  bottlenecked_nodes: Record<string, number>;
+  active_incident_count: number;
+  randomizer_enabled: boolean;
+  control_mode: "randomized" | "manual";
+}
+
+export async function fetchSimulationStatus(
+  baseUrl = getApiBaseUrl()
+): Promise<SimulationStatusResponse> {
+  return fetchJson<SimulationStatusResponse>(
+    `${baseUrl}/api/v1/simulation/status`
+  );
+}
+
+export async function setSimulationMode(
+  randomizerEnabled: boolean,
+  baseUrl = getApiBaseUrl()
+): Promise<SimulationStatusResponse> {
+  return fetchJson<SimulationStatusResponse>(
+    `${baseUrl}/api/v1/simulation/mode`,
+    {
+      method: "POST",
+      body: JSON.stringify({ randomizer_enabled: randomizerEnabled }),
+    }
+  );
+}
+
 export async function triggerDemoStep(
   baseUrl = getApiBaseUrl()
 ): Promise<TelemetrySnapshot> {

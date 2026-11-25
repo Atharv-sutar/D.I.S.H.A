@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -18,7 +18,9 @@ import {
   applySimulationPreset,
   controlBottleneck,
   createIncident,
+  fetchSimulationStatus,
   resetSimulationState,
+  setSimulationMode,
   setSimulationPhase,
   triggerDemoStep,
 } from "@shared/lib/apiClient";
@@ -96,7 +98,14 @@ export default function SimulatorStudioPage() {
   const [customTitle, setCustomTitle] = useState<string>("");
   const [customAction, setCustomAction] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [randomizerEnabled, setRandomizerEnabled] = useState(true);
   const [statusToast, setStatusToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetchSimulationStatus()
+      .then((status) => setRandomizerEnabled(status.randomizer_enabled))
+      .catch(() => undefined);
+  }, []);
 
   const selectedNode = useMemo(
     () => topology.nodes.find((n) => n.id === selectedNodeId) ?? topology.nodes[0],
@@ -199,6 +208,32 @@ export default function SimulatorStudioPage() {
             >
               Backend: {connectionStatus.toUpperCase()}
             </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                const next = !randomizerEnabled;
+                void runAction(
+                  next
+                    ? "Randomizer ON (Randomized Mode)"
+                    : "Randomizer OFF (Manual Control Mode)",
+                  async () => {
+                    const res = await setSimulationMode(next);
+                    setRandomizerEnabled(res.randomizer_enabled);
+                  }
+                );
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
+                randomizerEnabled
+                  ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              }`}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              {randomizerEnabled
+                ? "Randomizer: ON (Auto)"
+                : "Randomizer: OFF (Manual)"}
+            </button>
             <button
               type="button"
               disabled={busy}
