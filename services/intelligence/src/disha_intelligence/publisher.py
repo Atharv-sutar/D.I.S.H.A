@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import httpx
 
 from disha_intelligence.detector import IncidentDetector
+from disha_intelligence.forecaster import CongestionForecaster
 from disha_intelligence.models import AlertIncident, TelemetrySnapshot
 from disha_intelligence.scenarios import SCENARIOS, build_scenario_simulator
 from disha_intelligence.simulator import CrowdSimulator
@@ -51,6 +52,7 @@ class SimulationPublisher:
         config: PublisherConfig | None = None,
         simulator: CrowdSimulator | None = None,
         detector: IncidentDetector | None = None,
+        forecaster: CongestionForecaster | None = None,
     ) -> None:
         self.config = config or PublisherConfig.from_env()
         self.simulator = simulator or CrowdSimulator(
@@ -58,13 +60,26 @@ class SimulationPublisher:
             tick_seconds=self.config.tick_interval_seconds,
         )
         self.detector = detector or IncidentDetector(topology=self.simulator.topology)
+        self.forecaster = forecaster or CongestionForecaster(
+            tick_seconds=self.simulator._tick_seconds
+        )
 
     async def publish_tick(
         self, client: httpx.AsyncClient
     ) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
         """Advance one simulation tick, detect incidents, and POST to backend."""
         snapshot = self.simulator.step()
-        incidents = self.detector.analyze(snapshot)
+        self.forecaster.record(snapshot)
+        forecasts = self.forecaster.forecast_all()
+        incidents = self.detector.analyze(snapshot, forecasts=forecasts)
+
+        inc_by_node: dict[str, list[str]] = {}
+        for incident in incidents:
+            inc_by_node.setdefault(incident.node_id, []).append(incident.incident_id)
+        for node_tel in snapshot.nodes:
+            if node_tel.node_id in inc_by_node:
+                node_tel.active_incident_ids = inc_by_node[node_tel.node_id]
+                node_tel.pulse_intensity = 1.0
 
         resp = await client.post(
             self.config.ingest_url,

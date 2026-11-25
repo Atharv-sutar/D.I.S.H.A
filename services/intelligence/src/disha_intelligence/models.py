@@ -44,6 +44,8 @@ WaypointType = Literal[
     "reroute_avoidance",
     "destination",
 ]
+GateRole = Literal["entry", "exit", "entry_exit"]
+RouteMode = Literal["entry", "exit", "facility"]
 
 
 class HologramEnds(BaseModel):
@@ -82,6 +84,31 @@ class PerimeterRoad(BaseModel):
     angle_deg: float
 
 
+class FloodlightTower(BaseModel):
+    """3D stadium floodlight tower placement."""
+
+    id: str
+    name: str
+    x: float
+    y: float
+    height_m: float
+
+
+class StandSector(BaseModel):
+    """Curved 3D seating stand sector geometry."""
+
+    id: str
+    name: str
+    level: int
+    start_deg: float
+    end_deg: float
+    inner_radius_m: float
+    outer_radius_m: float
+    elevation_m: float
+    height_m: float
+    linked_node_id: str
+
+
 class HologramSpec(BaseModel):
     """3D holographic stadium architecture metadata."""
 
@@ -92,6 +119,8 @@ class HologramSpec(BaseModel):
     tier_rings: list[TierRing] = Field(default_factory=list)
     canopy_ring: CanopyRing | None = None
     perimeter_roads: list[PerimeterRoad] = Field(default_factory=list)
+    floodlight_towers: list[FloodlightTower] = Field(default_factory=list)
+    stand_sectors: list[StandSector] = Field(default_factory=list)
 
 
 class TopologyNode(BaseModel):
@@ -106,6 +135,7 @@ class TopologyNode(BaseModel):
     z: float = 0.0
     stand_code: str | None = None
     road_perimeter: str | None = None
+    gate_role: GateRole | None = None
     capacity: int = Field(..., ge=1)
     accessible: bool = True
     status: NodeTopologyStatus = "open"

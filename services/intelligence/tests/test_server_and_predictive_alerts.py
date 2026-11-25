@@ -93,13 +93,20 @@ def test_http_server_endpoints_end_to_end() -> None:
 
             forecast = client.get("/forecast")
             assert forecast.status_code == 200
-            assert len(forecast.json()["forecasts"]) == 26
+            forecasts = forecast.json()["forecasts"]
+            assert len(forecasts) == 26
+            assert "current_score" in forecasts[0]
+            assert "projected_5m_score" in forecasts[0]
+            assert "projected_10m_score" in forecasts[0]
+            assert "projected_5m_wait_min" in forecasts[0]
+            assert "risk_level" in forecasts[0]
 
             route = client.get(
                 "/routing/recommend",
                 params={
                     "origin": "transit_cubbon_park_metro",
                     "target_type": "gate",
+                    "route_mode": "entry",
                     "accessible": "true",
                 },
             )

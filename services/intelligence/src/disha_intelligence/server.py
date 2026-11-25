@@ -120,7 +120,33 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
 
             if path == "/forecast":
                 with runtime.lock:
-                    forecasts = [asdict(f) for f in runtime.forecaster.forecast_all()]
+                    tel_map = {n.node_id: n for n in runtime.latest_snapshot.nodes}
+                    forecasts = []
+                    for f in runtime.forecaster.forecast_all():
+                        item = asdict(f)
+                        node_tel = tel_map.get(f.node_id)
+                        trend = (node_tel.trend if node_tel and node_tel.trend else "stable")
+                        p5 = f.predicted_5m_congestion
+                        risk = (
+                            "critical"
+                            if p5 >= 0.85
+                            else "high"
+                            if p5 >= 0.65
+                            else "moderate"
+                            if p5 >= 0.40
+                            else "optimal"
+                        )
+                        item.update(
+                            {
+                                "current_score": f.current_congestion,
+                                "projected_5m_score": f.predicted_5m_congestion,
+                                "projected_10m_score": f.predicted_10m_congestion,
+                                "projected_5m_wait_min": f.predicted_5m_wait_min,
+                                "trend": trend,
+                                "risk_level": risk,
+                            }
+                        )
+                        forecasts.append(item)
                 self._send_json(HTTPStatus.OK, {"forecasts": forecasts})
                 return
 
@@ -129,6 +155,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                 origin = qs.get("origin", [None])[0]
                 target_type = qs.get("target_type", [None])[0]
                 target_id = qs.get("target_id", [None])[0]
+                route_mode = qs.get("route_mode", [None])[0]
                 accessible_raw = qs.get("accessible", ["false"])[0].lower()
                 accessible_only = accessible_raw in ("1", "true", "yes")
 
@@ -143,6 +170,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                             target_type=target_type,  # type: ignore[arg-type]
                             target_id=target_id,
                             accessible_only=accessible_only,
+                            route_mode=route_mode,  # type: ignore[arg-type]
                         )
                     self._send_json(HTTPStatus.OK, guidance.model_dump(mode="json"))
                 except ValueError as exc:
@@ -189,7 +217,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                 if not node_id:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "node_id is required"})
                     return
-                if body.get("clear"):
+                if body.get("clear") or body.get("active") is False:
                     runtime.clear_bottleneck(node_id)
                     self._send_json(HTTPStatus.OK, {"cleared": node_id})
                     return

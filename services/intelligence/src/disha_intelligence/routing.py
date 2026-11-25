@@ -11,6 +11,7 @@ from disha_intelligence.models import (
     FanGuidanceResponse,
     NodeTelemetry,
     NodeType,
+    RouteMode,
     RouteStep,
     StadiumTopology,
     TargetAlternative,
@@ -88,6 +89,7 @@ class WayfindingEngine:
         target_type: NodeType | None = None,
         target_id: str | None = None,
         accessible_only: bool = False,
+        route_mode: RouteMode | None = None,
     ) -> FanGuidanceResponse:
         """Compute optimal target & route minimizing walk + wait time."""
         if origin_node_id not in self._node_map:
@@ -114,6 +116,15 @@ class WayfindingEngine:
             if node.id not in graph:
                 continue
             if node.type == resolved_type:
+                if resolved_type == "gate" and route_mode == "entry":
+                    if node.gate_role not in ("entry", "entry_exit", None):
+                        continue
+                elif (
+                    resolved_type == "gate"
+                    and route_mode == "exit"
+                    and node.gate_role not in ("exit", "entry_exit", None)
+                ):
+                    continue
                 candidates.append(node)
 
         if (

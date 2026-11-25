@@ -11,6 +11,8 @@ def test_default_topology_schema_integrity() -> None:
     assert topology.levels == [0, 1, 2]
     assert topology.hologram_spec is not None
     assert topology.hologram_spec.field_radius_m == 68
+    assert len(topology.hologram_spec.floodlight_towers) == 4
+    assert len(topology.hologram_spec.stand_sectors) >= 7
     assert len(topology.nodes) == 26
     assert len(topology.edges) >= 35
 

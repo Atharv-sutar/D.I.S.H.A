@@ -59,3 +59,26 @@ def test_routing_accessible_only_excludes_stairs() -> None:
     ]
     assert accessible.accessible_only is True
     assert "stand_pavilion_p2" in accessible.route_node_ids
+
+
+def test_routing_respects_route_mode_entry_and_exit() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="egress")
+    snap = sim.step()
+    engine = WayfindingEngine(sim.topology)
+
+    entry_res = engine.recommend(
+        origin_node_id="concourse_north_e",
+        snapshot=snap,
+        target_type="gate",
+        route_mode="entry",
+    )
+    exit_res = engine.recommend(
+        origin_node_id="concourse_north_e",
+        snapshot=snap,
+        target_type="gate",
+        route_mode="exit",
+    )
+
+    node_map = {n.id: n for n in sim.topology.nodes}
+    assert node_map[entry_res.recommended_target_id].gate_role in ("entry", "entry_exit", None)
+    assert node_map[exit_res.recommended_target_id].gate_role in ("exit", "entry_exit", None)
