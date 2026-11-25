@@ -13,8 +13,10 @@
   - `simulator.py`: Deterministic seeded `CrowdSimulator` (`pre_event_ingress`, `in_play`, `halftime_surge`, `egress`, `idle`) with configurable bottleneck injection and expiry.
   - `routing.py`: `networkx`-based `WayfindingEngine` minimizing combined walk + queue wait time, with `accessible_only` filtering, turn-by-turn `steps`, `time_saved_min`, and `alternatives`.
   - `detector.py`: `IncidentDetector` flagging `queue_surge`, `crowd_bottleneck`, and stalled throughput anomalies with severity, confidence, recommended actions, and per-node cooldown.
-  - `publisher.py`: Async `SimulationPublisher` runner (`python -m disha_intelligence.publisher`) posting `TelemetrySnapshot` to `BACKEND_INGEST_URL` and `AlertIncident` to `BACKEND_INCIDENTS_URL`.
-- Verified with `pytest` (11/11 passing).
+  - `publisher.py`: Async `SimulationPublisher` runner (`python -m disha_intelligence.publisher --scenario halftime_rush --ticks 3 --dry-run`) posting `TelemetrySnapshot` to `BACKEND_INGEST_URL` and `AlertIncident` to `BACKEND_INCIDENTS_URL`.
+  - `forecaster.py`: Sliding-window `CongestionForecaster` predicting `+5m` and `+10m` congestion scores, wait times, and critical-threshold breaches.
+  - `scenarios.py`: Reproducible matchday scenario presets (`matchday_ingress`, `halftime_rush`, `in_play_steady`, `post_match_egress`).
+- Verified with `pytest` (14/14 passing, including contract JSON schema conformance) and `ruff check`.
 
 ## Active Interfaces Provided
 - Importable Python package `disha_intelligence` (`build_default_topology`, `CrowdSimulator`, `WayfindingEngine`, `IncidentDetector`, `SimulationPublisher`).
