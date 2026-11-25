@@ -25,17 +25,17 @@ Canonical Venue: **M. Chinnaswamy Stadium, Bengaluru** (`contracts/venues/chinna
 Receives live server-push envelopes for the 3D Ops Hologram & incident console:
 ```json
 {
-  "event": "snapshot_init | telemetry_update | incident_created | incident_updated",
+  "event": "telemetry_update | incident_created | incident_updated",
   "timestamp": "2026-11-25T10:00:00Z",
   "payload": {}
 }
 ```
 
 ### 2. Fan Live Advisory Stream — `WS /ws/fan`
-Receives crowd advisory, gate wait-times, and hazard avoidance alerts for the 3D Fan Hologram:
+Receives crowd advisory, gate wait-times, and hazard avoidance alerts for the 3D Fan Hologram (`gate_advisory` / `facility_alert` payload: `{ advisory_id, title, message, severity, node_id?, recommended_node_id? }`):
 ```json
 {
-  "event": "snapshot_init | wait_times_update | gate_advisory | facility_alert",
+  "event": "wait_times_update | gate_advisory | facility_alert",
   "timestamp": "2026-11-25T10:00:00Z",
   "payload": {}
 }

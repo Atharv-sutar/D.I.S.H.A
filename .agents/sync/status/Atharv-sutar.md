@@ -9,6 +9,7 @@
 - Implemented working FastAPI + WebSocket backend in `services/backend/src/disha_backend/` (`main.py`, `models.py`, `venue_loader.py`, `routing.py`, `state.py`, `ws_manager.py`).
 - Loaded canonical 3D **M. Chinnaswamy Stadium** topology (`contracts/venues/chinnaswamy_stadium.json`) with 26 navigable nodes across levels 0, 1, 2 and full `hologram_spec`.
 - Implemented exact fan 3D location snapping (`POST /api/v1/fans/locate`), congestion-aware Dijkstra routing with game-style `waypoints_3d` (`GET /api/v1/routing/recommend`), incident lifecycle (`GET/POST/PATCH /api/v1/incidents`), live demo ticker (`POST /api/v1/demo/step`), and WebSocket streams (`/ws/ops`, `/ws/fan`).
+- Aligned `/ws/ops` (`telemetry_update`, `incident_created`, `incident_updated`) and `/ws/fan` (`wait_times_update`, `gate_advisory`, `facility_alert` `FanAdvisoryPayload`) envelopes with `apps/shared/types/ws.ts`, plus CORS for ports `3000` & `3001`.
 - Added unit + ASGI end-to-end tests in `services/backend/tests/test_backend.py` and `test_smoke.py`.
 
 ## Active Interfaces Provided

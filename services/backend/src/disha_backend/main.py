@@ -28,6 +28,23 @@ from disha_backend.venue_loader import load_stadium_topology, snap_position_to_n
 from disha_backend.ws_manager import ConnectionManager
 
 
+def _incident_to_fan_advisory(incident: AlertIncident) -> dict[str, object]:
+    """Convert an operational AlertIncident into a FanAdvisoryPayload envelope."""
+    severity_map = {
+        "low": "info",
+        "medium": "warning",
+        "high": "warning",
+        "critical": "critical",
+    }
+    return {
+        "advisory_id": f"adv_{incident.incident_id}",
+        "title": incident.title,
+        "message": incident.recommended_action or incident.description,
+        "severity": severity_map.get(incident.severity, "warning"),
+        "node_id": incident.node_id,
+    }
+
+
 def _allowed_origins() -> list[str]:
     raw = os.environ.get(
         "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001"
@@ -166,7 +183,11 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         payload = model_to_dict(incident)
         await ws_manager.broadcast("ops", "incident_created", payload)
-        await ws_manager.broadcast("fan", "facility_alert", payload)
+        await ws_manager.broadcast(
+            "fan",
+            "gate_advisory" if incident.category == "queue_surge" else "facility_alert",
+            _incident_to_fan_advisory(incident),
+        )
         return incident
 
     @application.patch("/api/v1/incidents/{incident_id}", response_model=AlertIncident, tags=["incidents"])
@@ -193,16 +214,22 @@ def create_app() -> FastAPI:
         """Live WebSocket feed for the 3D Operations Command Center."""
         await ws_manager.connect("ops", websocket)
         try:
+            now_iso = datetime.now(timezone.utc).isoformat()
             await websocket.send_json(
                 {
-                    "event": "snapshot_init",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "payload": {
-                        "telemetry": model_to_dict(store.latest_telemetry),
-                        "incidents": [model_to_dict(i) for i in store.list_incidents()],
-                    },
+                    "event": "telemetry_update",
+                    "timestamp": now_iso,
+                    "payload": model_to_dict(store.latest_telemetry),
                 }
             )
+            for inc in store.list_incidents():
+                await websocket.send_json(
+                    {
+                        "event": "incident_created",
+                        "timestamp": now_iso,
+                        "payload": model_to_dict(inc),
+                    }
+                )
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
@@ -213,19 +240,26 @@ def create_app() -> FastAPI:
         """Live WebSocket feed for the 3D Fan Navigation Hologram App."""
         await ws_manager.connect("fan", websocket)
         try:
+            now_iso = datetime.now(timezone.utc).isoformat()
             await websocket.send_json(
                 {
-                    "event": "snapshot_init",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "payload": {
-                        "telemetry": model_to_dict(store.latest_telemetry),
-                        "active_alerts": [
-                            model_to_dict(i)
-                            for i in store.list_incidents(include_resolved=False)
-                        ],
-                    },
+                    "event": "wait_times_update",
+                    "timestamp": now_iso,
+                    "payload": model_to_dict(store.latest_telemetry),
                 }
             )
+            for inc in store.list_incidents(include_resolved=False):
+                await websocket.send_json(
+                    {
+                        "event": (
+                            "gate_advisory"
+                            if inc.category == "queue_surge"
+                            else "facility_alert"
+                        ),
+                        "timestamp": now_iso,
+                        "payload": _incident_to_fan_advisory(inc),
+                    }
+                )
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:

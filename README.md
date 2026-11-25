@@ -78,8 +78,8 @@ D.I.S.H.A/
 ### 1. Clone & Configure Your Git Identity
 
 ```bash
-git clone https://github.com/Atharv-sutar/D.I.S.H.A..git
-cd D.I.S.H.A.
+git clone https://github.com/Atharv-sutar/D.I.S.H.A.git
+cd D.I.S.H.A
 ```
 
 Ensure your local Git identity matches your team profile in [`.agents/ownership.json`](.agents/ownership.json) so Antigravity IDE automatically knows which module belongs to you:

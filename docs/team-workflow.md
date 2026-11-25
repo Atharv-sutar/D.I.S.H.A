@@ -23,8 +23,8 @@ When you open `D.I.S.H.A.` in Antigravity IDE on your laptop:
 ### First-Time Setup on Shreyas's & Ankit's Laptops
 
 ```bash
-git clone https://github.com/Atharv-sutar/D.I.S.H.A..git
-cd D.I.S.H.A.
+git clone https://github.com/Atharv-sutar/D.I.S.H.A.git
+cd D.I.S.H.A
 
 # Configure your Git identity so commits and agent detection work automatically:
 git config user.name "<Your-GitHub-Handle>"   # Shreyas-D-M OR Ankit-Navi-8294

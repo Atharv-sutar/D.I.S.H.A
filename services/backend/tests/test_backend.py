@@ -6,7 +6,7 @@ import asyncio
 import json
 import unittest
 
-from disha_backend.main import create_app
+from disha_backend.main import _incident_to_fan_advisory, create_app
 from disha_backend.models import IncidentCreateRequest, IncidentPatchRequest, LocateFanRequest
 from disha_backend.routing import recommend_route
 from disha_backend.state import StadiumStateStore
@@ -168,6 +168,11 @@ class BackendFoundationTests(unittest.TestCase):
         status, stepped = _run_asgi_request(self.app, "POST", "/api/v1/demo/step")
         self.assertEqual(status, 200)
         self.assertEqual(stepped["venue_id"], "chinnaswamy_bengaluru")
+
+        first_inc = self.store.list_incidents()[0]
+        advisory = _incident_to_fan_advisory(first_inc)
+        self.assertIn("advisory_id", advisory)
+        self.assertIn(advisory["severity"], ("info", "warning", "critical"))
 
 
 if __name__ == "__main__":
