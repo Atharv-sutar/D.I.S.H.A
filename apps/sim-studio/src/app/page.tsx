@@ -380,7 +380,7 @@ export default function SimulatorStudioPage() {
               </div>
               <input
                 type="range"
-                min={50}
+                min={10}
                 max={99}
                 value={severityPct}
                 onChange={(e) => setSeverityPct(Number(e.target.value))}

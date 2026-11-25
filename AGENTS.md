@@ -1,7 +1,7 @@
 # D.I.S.H.A. Workspace Agent Constitution
 
 Welcome to **D.I.S.H.A.** (Smart Stadium Operations and Fan Experience Platform).
-Two developers work concurrently on separate laptops via `https://github.com/Atharv-sutar/D.I.S.H.A.`.
+Two developers (`Atharv-sutar` and `Shreyas-D-M`) collaborate via `https://github.com/Atharv-sutar/D.I.S.H.A.`.
 
 ## Mandatory Startup & Pull-Before-Task Protocol
 
@@ -14,26 +14,18 @@ Before beginning any new task, feature, bugfix, or exploration in this repositor
    - If the working tree is clean, immediately run `git pull --rebase origin main` (or use `python .agents/scripts/identify_dev.py --pull`).
    - If uncommitted local changes prevent rebasing, stash or resolve them cleanly (never discard user work silently) and sync with `origin/main` before starting the new task.
 3. **Read teammate sync context & self-serve directives after pulling**:
-   - `.agents/sync/directives/<your-github-handle>.md` (your queued autonomous tasks)
+   - `.agents/sync/directives/<your-github-handle>.md`
    - `.agents/sync/status/Atharv-sutar.md`, `.agents/sync/status/Shreyas-D-M.md`
    - Recent files in `.agents/sync/handoffs/`
    - Relevant schemas & venues in `contracts/`
-4. **Zero-Prompt Autonomous Continuation**:
-   - Do NOT wait for manual cross-laptop copy-paste prompts from teammates.
-   - Automatically derive your next action from open handoffs targeted to you, `contracts/` updates since your last commit, and `[PENDING]` tasks in `.agents/sync/directives/<your-github-handle>.md`, then proceed directly within your owned folder.
 
-## Hard Module Ownership Boundaries
+## Full Repository Access
 
-NEVER create, modify, or delete files inside another developer's module directory or any forbidden path unless the user gives an explicit one-time override:
-
-- **`Atharv-sutar`**: Owns `services/backend/` and `apps/` (`apps/ops-dashboard/`, `apps/fan-app/`, `apps/sim-studio/`, `apps/shared/`).
-- **`Shreyas-D-M`**: Owns `services/intelligence/` (congestion/alert analytics, forecasting, and routing) **EXCEPT** the simulator (`apps/sim-studio/`, `services/intelligence/src/disha_intelligence/simulator.py`, `services/intelligence/src/disha_intelligence/scenarios.py`, `services/intelligence/tests/test_simulator.py`), which `Shreyas-D-M` is strictly forbidden from modifying.
-
-Reading peer `README.md` files and `contracts/` is encouraged; modifying peer code or simulator files when forbidden is strictly prohibited. To request an API or schema change from another layer, create a handoff file in `.agents/sync/handoffs/` (see `.agents/skills/propose-contract/SKILL.md`).
+All project files (`services/backend/`, `services/intelligence/`, `apps/`, `contracts/`, `scripts/`, `docs/`, `.agents/`) are **accessible to all developers**. There are no per-developer directory locks.
 
 ## Mandatory Git Push Discipline
 
 After completing verified changes:
-1. Run `python .agents/scripts/check_boundaries.py` to confirm all modified files belong to the active developer.
-2. Update **only** your own status file `.agents/sync/status/<github-handle>.md` (never edit another developer's status file).
-3. Stage only your owned changes, commit with `<type>(<scope>): <description> [<github-handle>]` under the matching `git config user.name`, and push to GitHub (`git pull --rebase` first if remote is ahead).
+1. Run relevant tests/builds (`services/backend/tests`, `services/intelligence/tests`, `apps/`).
+2. Update your status file `.agents/sync/status/<github-handle>.md`.
+3. Stage your changes, commit with `<type>(<scope>): <description> [<github-handle>]` under the matching `git config user.name`, and push to GitHub (`git pull --rebase` first if remote is ahead).

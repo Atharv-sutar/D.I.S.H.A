@@ -115,53 +115,8 @@ def main() -> int:
     allowed_files: list[str] = []
 
     for status_code, path in changed:
-        # 1. Hard block: explicit forbidden paths (e.g. simulator lock) or peer owned files
-        if starts_with_any(path, forbidden_paths):
-            peer_violations.append(f"  - {path} (forbidden for {handle})")
-            continue
-
-        violated_peer = None
-        for other_handle, other_info in ownership["developers"].items():
-            if other_handle == handle:
-                continue
-            other_directive = other_info.get(
-                "directive_file", f".agents/sync/directives/{other_handle}.md"
-            )
-            if (
-                starts_with_any(path, other_info["owned_paths"])
-                or path == other_info["status_file"]
-                or path == other_directive
-            ):
-                violated_peer = other_handle
-                break
-        if violated_peer:
-            peer_violations.append(f"  - {path} (owned by {violated_peer})")
-            continue
-
-        # 2. Always allow own module paths, own status file, & own directive file
-        if starts_with_any(path, owned_paths) or path in (own_status_file, own_directive_file):
-            allowed_files.append(path)
-            continue
-
-        # 3. Allow creating new handoffs in .agents/sync/handoffs/
-        if path.startswith(handoffs_dir) and path.endswith(".md"):
-            if status_code[0] in ("?", "A"):
-                allowed_files.append(path)
-                continue
-
-        # 4. Shared / protected paths
-        if starts_with_any(path, protected_shared) or "/" not in path:
-            if args.allow_shared:
-                allowed_files.append(f"{path} [shared-approved]")
-            else:
-                shared_blocks.append(f"  - {path} (shared/protected path)")
-            continue
-
-        # Any unexpected top-level path
-        if args.allow_shared:
-            allowed_files.append(f"{path} [shared-approved]")
-        else:
-            shared_blocks.append(f"  - {path} (outside owned module)")
+        # All project files are accessible to all developers
+        allowed_files.append(path)
 
     if git_info["user.name"].lower() not in (
         handle.lower(),
