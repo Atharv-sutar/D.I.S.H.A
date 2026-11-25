@@ -31,6 +31,8 @@ from disha_backend.models import (
     OpsOverviewResponse,
     RouteMode,
     SimulationPhaseRequest,
+    SimulationPresetRequest,
+    SimulationStatusResponse,
     StadiumTopology,
     TelemetrySnapshot,
     model_to_dict,
@@ -60,7 +62,8 @@ def _incident_to_fan_advisory(incident: AlertIncident) -> dict[str, object]:
 
 def _allowed_origins() -> list[str]:
     raw = os.environ.get(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001"
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:3001,http://localhost:3002",
     )
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
@@ -358,6 +361,43 @@ def create_app() -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         await _broadcast_telemetry(updated)
+        return updated
+
+    @application.get("/api/v1/simulation/status", response_model=SimulationStatusResponse, tags=["simulation"])
+    async def get_simulation_status() -> SimulationStatusResponse:
+        """Return active simulator phase, tick count, and bottleneck overrides."""
+        return SimulationStatusResponse(
+            venue_id=store.topology.venue_id,
+            event_phase=store.latest_telemetry.event_phase,
+            tick_count=store._tick_count,
+            bottlenecked_nodes=dict(store._bottleneck_overrides),
+            active_incident_count=len(store.list_incidents(include_resolved=False)),
+        )
+
+    @application.post("/api/v1/simulation/reset", response_model=TelemetrySnapshot, tags=["simulation"])
+    async def reset_simulation() -> TelemetrySnapshot:
+        """Reset bottlenecks and restore baseline stadium telemetry & seed incidents."""
+        updated, incidents = store.reset_demo_state()
+        await _broadcast_telemetry(updated)
+        for inc in incidents:
+            await ws_manager.broadcast("ops", "incident_created", model_to_dict(inc))
+        return updated
+
+    @application.post("/api/v1/simulation/preset", response_model=TelemetrySnapshot, tags=["simulation"])
+    async def apply_simulation_preset(req: SimulationPresetRequest) -> TelemetrySnapshot:
+        """Apply a curated demonstration scenario and broadcast live updates."""
+        try:
+            updated, created_incidents = store.apply_demo_preset(req.preset)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_telemetry(updated)
+        for inc in created_incidents:
+            await ws_manager.broadcast("ops", "incident_created", model_to_dict(inc))
+            await ws_manager.broadcast(
+                "fan",
+                "gate_advisory" if inc.category == "queue_surge" else "facility_alert",
+                _incident_to_fan_advisory(inc),
+            )
         return updated
 
     @application.post("/api/v1/demo/step", response_model=TelemetrySnapshot, tags=["demo"])

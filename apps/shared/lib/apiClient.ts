@@ -3,6 +3,8 @@ import type {
   AlertIncident,
   EventPhase,
   FanGuidanceResponse,
+  IncidentCategory,
+  IncidentSeverity,
   LocateFanRequest,
   LocateFanResponse,
   StadiumTopology,
@@ -116,6 +118,64 @@ export async function setSimulationPhase(
   return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/phase`, {
     method: "POST",
     body: JSON.stringify({ phase }),
+  });
+}
+
+export async function controlBottleneck(
+  payload: { node_id: string; severity?: number; clear?: boolean },
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/bottleneck`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function applySimulationPreset(
+  preset:
+    | "normal_flow"
+    | "gate1_rush"
+    | "halftime_concession_spike"
+    | "medical_emergency_east"
+    | "post_match_egress",
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/preset`, {
+    method: "POST",
+    body: JSON.stringify({ preset }),
+  });
+}
+
+export async function resetSimulationState(
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/reset`, {
+    method: "POST",
+  });
+}
+
+export async function triggerDemoStep(
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/demo/step`, {
+    method: "POST",
+  });
+}
+
+export async function createIncident(
+  payload: {
+    category: IncidentCategory;
+    severity: IncidentSeverity;
+    node_id: string;
+    title: string;
+    description: string;
+    recommended_action: string;
+  },
+  baseUrl = getApiBaseUrl()
+): Promise<AlertIncident> {
+  return fetchJson<AlertIncident>(`${baseUrl}/api/v1/incidents`, {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 

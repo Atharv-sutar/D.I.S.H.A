@@ -229,6 +229,23 @@ class BackendFoundationTests(unittest.TestCase):
         )
         self.assertGreaterEqual(len(exit_routed["waypoints_3d"]), 2)
 
+        status, sim_status = _run_asgi_request(self.app, "GET", "/api/v1/simulation/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(sim_status["venue_id"], "chinnaswamy_bengaluru")
+
+        status, preset_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/preset",
+            body={"preset": "medical_emergency_east"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(preset_snap["event_phase"], "in_play")
+
+        status, reset_snap = _run_asgi_request(self.app, "POST", "/api/v1/simulation/reset")
+        self.assertEqual(status, 200)
+        self.assertEqual(reset_snap["event_phase"], "pre_event_ingress")
+
         first_inc = self.store.list_incidents()[0]
         advisory = _incident_to_fan_advisory(first_inc)
         self.assertIn("advisory_id", advisory)

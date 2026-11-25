@@ -261,6 +261,100 @@ class StadiumStateStore:
         self._bottleneck_overrides.pop(node_id, None)
         return self.step_demo_telemetry()
 
+    def reset_demo_state(self) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
+        """Reset all bottlenecks and restore baseline M. Chinnaswamy state."""
+        self._bottleneck_overrides.clear()
+        self._tick_count = 0
+        self.incidents.clear()
+        self._seed_initial_incidents()
+        self.latest_telemetry = self._build_seed_telemetry()
+        self._history.clear()
+        self._history.append(self.latest_telemetry)
+        return self.latest_telemetry, self.list_incidents()
+
+    def apply_demo_preset(
+        self, preset: str
+    ) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
+        """Apply a curated behind-the-scenes demonstration scenario."""
+        self._bottleneck_overrides.clear()
+        created_incidents: list[AlertIncident] = []
+
+        if preset == "normal_flow":
+            self.incidents = {
+                k: v for k, v in self.incidents.items() if v.status == "resolved"
+            }
+            snap = self.step_demo_telemetry(phase="in_play")
+            return snap, created_incidents
+
+        if preset == "gate1_rush":
+            self._bottleneck_overrides["gate_1_cubbon"] = 0.94
+            self._bottleneck_overrides["concourse_north_e"] = 0.82
+            snap = self.step_demo_telemetry(phase="pre_event_ingress")
+            inc = self.create_incident(
+                IncidentCreateRequest(
+                    category="queue_surge",
+                    severity="critical",
+                    node_id="gate_1_cubbon",
+                    title="Simulated Gate 1 (Cubbon Road) Matchday Crush",
+                    description="Pre-match entry queue exceeded 94% capacity with 16+ min wait.",
+                    recommended_action="Divert fans via 3D waypoints to Gate 18 (Queen's Rd) & Gate 4.",
+                )
+            )
+            created_incidents.append(inc)
+            return snap, created_incidents
+
+        if preset == "halftime_concession_spike":
+            self._bottleneck_overrides["concession_north_express"] = 0.93
+            self._bottleneck_overrides["concession_south_corner"] = 0.86
+            snap = self.step_demo_telemetry(phase="halftime_surge")
+            inc = self.create_incident(
+                IncidentCreateRequest(
+                    category="crowd_bottleneck",
+                    severity="high",
+                    node_id="concession_north_express",
+                    title="Simulated Halftime Food Court Surge (E Stand)",
+                    description="Halftime rush spiking queues at North Food Hub & South Corner.",
+                    recommended_action="Guide fans to East Concourse Cafe (F1/F2) & Pavilion Lounge.",
+                )
+            )
+            created_incidents.append(inc)
+            return snap, created_incidents
+
+        if preset == "medical_emergency_east":
+            self._bottleneck_overrides["concourse_east_f"] = 0.85
+            snap = self.step_demo_telemetry(phase="in_play")
+            inc = self.create_incident(
+                IncidentCreateRequest(
+                    category="medical",
+                    severity="critical",
+                    node_id="stand_f1_f2",
+                    title="Simulated Medical Alert at F1/F2 East Bowl",
+                    description="Emergency medical response requested in F1/F2 seating block.",
+                    recommended_action="Dispatch First-Aid Post East team and keep East Concourse lane clear.",
+                )
+            )
+            created_incidents.append(inc)
+            return snap, created_incidents
+
+        if preset == "post_match_egress":
+            self._bottleneck_overrides["concourse_north_e"] = 0.88
+            self._bottleneck_overrides["gate_9_mg"] = 0.84
+            snap = self.step_demo_telemetry(phase="egress")
+            inc = self.create_incident(
+                IncidentCreateRequest(
+                    category="crowd_bottleneck",
+                    severity="high",
+                    node_id="gate_9_mg",
+                    title="Simulated Post-Match Exit Surge at Gate 9 (MG Road)",
+                    description="Heavy egress toward MG Road Metro causing bottleneck at Gate 9.",
+                    recommended_action="Route exiting fans to Gate 4 (Cubbon East) & Gate 18 (Queen's Rd).",
+                )
+            )
+            created_incidents.append(inc)
+            return snap, created_incidents
+
+        raise ValueError(f"Unknown preset: {preset}")
+
     def step_demo_telemetry(self, phase: EventPhase | None = None) -> TelemetrySnapshot:
         """Advance deterministic demo telemetry one tick for standalone development."""
         self._tick_count += 1

@@ -16,8 +16,9 @@
   - Built interactive 3D M. Chinnaswamy Stadium Hologram (`apps/shared/components/StadiumHologram3D.tsx` & `apps/shared/components/hologram/HologramSceneContent.tsx`) with orbit/zoom/pan controls, explicit `Reset View` camera button (no auto-reset on telemetry ticks), seat ticket parser & 3D seat beacon (`apps/shared/lib/seatMapper.ts`), and simulated 3D walking along `waypoints_3d` (`apps/shared/hooks/useWalkSimulator.ts`) that locks the user's current position to their seat upon arrival.
   - Integrated into `apps/fan-app` and `apps/ops-dashboard` (`typecheck`, `lint`, `build` passing on both).
 
-- **Unified Single-Command Launcher**:
-  - Added `scripts/start_disha.py`, `start.ps1`, `start.bat`, `start.sh`, and root `package.json` (`npm start`) to boot Backend (`:8000`), optional Intelligence (`:8001`), Ops Dashboard (`:3000`), and Fan App (`:3001`) in one command and auto-open both apps in the browser once healthy.
+- **Unified Single-Command Launcher & 3-App Suite**:
+  - Added 3rd Next.js app `apps/sim-studio/` (`:3002`) for behind-the-scenes congestion & incident simulation at any M. Chinnaswamy Stadium location, backed by `/api/v1/simulation/status`, `/api/v1/simulation/reset`, and `/api/v1/simulation/preset` (+ CORS for `:3002`).
+  - Updated `scripts/start_disha.py`, `start.ps1`, `start.bat`, `start.sh`, and root `package.json` (`npm start`) to boot Backend (`:8000`), optional Intelligence (`:8001`), Ops Admin (`:3000`), Fan 3D App (`:3001`), and Simulator Studio (`:3002`) in one command and auto-open all 3 apps in the browser.
 - **Active Interfaces Provided**
 - `GET /health`, `GET /api/v1/venue/topology`, `GET /api/v1/telemetry/latest`, `POST /api/v1/telemetry/ingest`
 - `GET /api/v1/ops/overview`, `GET /api/v1/hologram/frame`, `GET /api/v1/analytics/forecast`

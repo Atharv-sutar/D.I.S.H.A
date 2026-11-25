@@ -93,6 +93,14 @@ def ensure_npm_deps(app_dir: Path, npm_cmd: str) -> None:
     subprocess.run([npm_cmd, "install"], cwd=str(app_dir), check=True)
 
 
+def ensure_next_build(app_dir: Path, npm_cmd: str) -> None:
+    """Build production .next bundle automatically in --prod mode if missing."""
+    if (app_dir / ".next" / "BUILD_ID").exists():
+        return
+    print(f"[setup] Building production bundle for {app_dir.name}...")
+    subprocess.run([npm_cmd, "run", "build"], cwd=str(app_dir), check=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Launch all D.I.S.H.A. services and open the 3D Stadium apps in browser."
@@ -118,9 +126,15 @@ def main() -> int:
     intel_dir = REPO_ROOT / "services" / "intelligence"
     ops_dir = REPO_ROOT / "apps" / "ops-dashboard"
     fan_dir = REPO_ROOT / "apps" / "fan-app"
+    sim_dir = REPO_ROOT / "apps" / "sim-studio"
 
     ensure_npm_deps(ops_dir, npm_cmd)
     ensure_npm_deps(fan_dir, npm_cmd)
+    ensure_npm_deps(sim_dir, npm_cmd)
+    if args.prod:
+        ensure_next_build(ops_dir, npm_cmd)
+        ensure_next_build(fan_dir, npm_cmd)
+        ensure_next_build(sim_dir, npm_cmd)
 
     backend_py = find_python_for(backend_dir)
     if not can_import(backend_py, ["fastapi", "uvicorn", "pydantic"], backend_dir / "src"):
@@ -181,31 +195,37 @@ def main() -> int:
         else:
             print("[intelligence] Optional packages not installed in this env; using backend live stream.")
 
-        # 3. Frontend Apps (Ops Dashboard :3000 & Fan 3D App :3001)
+        # 3. Frontend Apps (Ops Dashboard :3000, Fan 3D App :3001, Simulator Studio :3002)
         next_script = "start" if args.prod else "dev"
         launch("ops-ui", [npm_cmd, "run", next_script], ops_dir)
         launch("fan-ui", [npm_cmd, "run", next_script], fan_dir)
+        launch("sim-ui", [npm_cmd, "run", next_script], sim_dir)
 
         print("Waiting for services to become ready...")
         backend_ok = wait_for_http("http://127.0.0.1:8000/health", timeout_sec=25.0)
         ops_ok = wait_for_http("http://localhost:3000", timeout_sec=45.0)
         fan_ok = wait_for_http("http://localhost:3001", timeout_sec=45.0)
+        sim_ok = wait_for_http("http://localhost:3002", timeout_sec=45.0)
 
         print(
             f"Readiness -> Backend(8000): {'OK' if backend_ok else 'WAIT'} | "
             f"Ops(3000): {'OK' if ops_ok else 'WAIT'} | "
-            f"Fan(3001): {'OK' if fan_ok else 'WAIT'}"
+            f"Fan(3001): {'OK' if fan_ok else 'WAIT'} | "
+            f"Sim(3002): {'OK' if sim_ok else 'WAIT'}"
         )
 
         if not args.no_browser:
-            print("Launching D.I.S.H.A. 3D apps in your browser...")
+            print("Launching all 3 D.I.S.H.A. apps in your browser...")
             webbrowser.open("http://localhost:3001")
-            time.sleep(0.6)
+            time.sleep(0.5)
             webbrowser.open("http://localhost:3000")
+            time.sleep(0.5)
+            webbrowser.open("http://localhost:3002")
 
         print("\nD.I.S.H.A. is running!")
         print("  - Fan 3D Navigation App : http://localhost:3001")
         print("  - Ops 3D Command Center : http://localhost:3000")
+        print("  - Simulator Studio App  : http://localhost:3002")
         print("  - Backend Swagger Docs  : http://localhost:8000/docs")
         print("Press Ctrl+C to stop all services.\n")
 
@@ -215,7 +235,7 @@ def main() -> int:
                 code = proc.poll()
                 if code is not None:
                     print(f"[{name}] exited with code {code}")
-                    if name in ("backend", "ops-ui", "fan-ui"):
+                    if name in ("backend", "ops-ui", "fan-ui", "sim-ui"):
                         return code
 
     except KeyboardInterrupt:

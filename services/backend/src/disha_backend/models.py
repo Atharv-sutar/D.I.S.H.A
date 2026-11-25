@@ -437,3 +437,28 @@ class BottleneckRequest(BaseModel):
     severity: float = Field(0.92, ge=0.1, le=1.0)
     duration_ticks: Optional[int] = None
     clear: bool = False
+
+
+SimulationPresetName = Literal[
+    "normal_flow",
+    "gate1_rush",
+    "halftime_concession_spike",
+    "medical_emergency_east",
+    "post_match_egress",
+]
+
+
+class SimulationPresetRequest(BaseModel):
+    """Request to apply a 1-click stadium demonstration scenario."""
+
+    preset: SimulationPresetName
+
+
+class SimulationStatusResponse(BaseModel):
+    """Current simulator control state for Simulator Studio UI."""
+
+    venue_id: str
+    event_phase: EventPhase
+    tick_count: int
+    bottlenecked_nodes: dict[str, float]
+    active_incident_count: int

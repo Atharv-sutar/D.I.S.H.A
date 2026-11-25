@@ -87,8 +87,9 @@ npm start          # Any OS
 
 This starts:
 - **Core Backend & WebSockets**: `http://localhost:8000` (`/docs`)
-- **Operations 3D Command Center**: `http://localhost:3000` (auto-opens in browser)
-- **Fan 3D Navigation App**: `http://localhost:3001` (auto-opens in browser)
+- **Operations 3D Command Center (Admin)**: `http://localhost:3000` (auto-opens in browser)
+- **Fan 3D Navigation App (User)**: `http://localhost:3001` (auto-opens in browser)
+- **Simulator Studio (Behind-the-Scenes Demo)**: `http://localhost:3002` (auto-opens in browser)
 - **Intelligence Engine** (`:8001`, started automatically when `services/intelligence` deps are installed)
 
 ---
