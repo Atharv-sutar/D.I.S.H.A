@@ -228,5 +228,15 @@ export function buildDetailedStadiumPath(
     }
   }
 
-  return detailed;
+  const deduped: PathPoint3D[] = [];
+  for (const pt of detailed) {
+    const prev = deduped[deduped.length - 1];
+    if (
+      !prev ||
+      Math.hypot(pt.x - prev.x, pt.y - prev.y, pt.z - prev.z) >= 0.25
+    ) {
+      deduped.push(pt);
+    }
+  }
+  return deduped;
 }

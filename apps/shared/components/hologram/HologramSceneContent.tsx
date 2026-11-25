@@ -124,12 +124,14 @@ function SteppedStandSector({
   congestionScore,
   isSelected,
   isGatesOnly,
+  placeUserMode,
   onSelect,
 }: {
   sector: StandSector;
   congestionScore: number;
   isSelected: boolean;
   isGatesOnly: boolean;
+  placeUserMode: boolean;
   onSelect?: (nodeId: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -200,6 +202,7 @@ function SteppedStandSector({
       }}
       onPointerOut={() => setHovered(false)}
       onClick={(e) => {
+        if (placeUserMode) return;
         e.stopPropagation();
         onSelect?.(sector.linked_node_id);
       }}
@@ -887,11 +890,13 @@ function UserLocationMarker({
 
 function WaypointTrail3D({
   waypoints,
+  userPosition,
   targetLabel,
   isExitRoute,
   showLabels,
 }: {
   waypoints: Waypoint3D[];
+  userPosition?: UserPosition3D | null;
   targetLabel?: string;
   isExitRoute: boolean;
   showLabels: boolean;
@@ -899,14 +904,35 @@ function WaypointTrail3D({
   const pulseDotRef = useRef<THREE.Mesh>(null);
 
   const curve = useMemo(() => {
-    if (waypoints.length < 2) return null;
-    const expanded = buildDetailedStadiumPath(waypoints);
+    if (waypoints.length === 0) return null;
+    const rawPts: { x: number; y: number; z: number }[] = waypoints.map((wp) => ({
+      x: wp.x,
+      y: wp.y,
+      z: wp.z,
+    }));
+    if (userPosition) {
+      const first = rawPts[0];
+      const dist = Math.hypot(
+        userPosition.x - first.x,
+        userPosition.y - first.y
+      );
+      if (dist > 2.0) {
+        rawPts.unshift({
+          x: userPosition.x,
+          y: userPosition.y,
+          z: userPosition.z,
+        });
+      }
+    }
+    if (rawPts.length < 2) return null;
+    const expanded = buildDetailedStadiumPath(rawPts);
+    if (expanded.length < 2) return null;
     const pts = expanded.map((wp) => {
       const [px, py, pz] = toThree(wp.x, wp.y, wp.z + 1.15);
       return new THREE.Vector3(px, py, pz);
     });
     return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.25);
-  }, [waypoints]);
+  }, [waypoints, userPosition]);
 
   const tubeGeometry = useMemo(() => {
     if (!curve) return null;
@@ -1365,6 +1391,7 @@ export function HologramSceneContent({
             congestionScore={score}
             isSelected={selectedNodeId === sector.linked_node_id}
             isGatesOnly={layerFilter === "route_only"}
+            placeUserMode={placeUserMode}
             onSelect={onSelectNode}
           />
         );
@@ -1500,6 +1527,7 @@ export function HologramSceneContent({
       {guidance && guidance.waypoints_3d.length > 0 && (
         <WaypointTrail3D
           waypoints={guidance.waypoints_3d}
+          userPosition={userPosition}
           targetLabel={guidance.target_beacon?.label}
           isExitRoute={Boolean(isExitRoute)}
           showLabels={showLabels}

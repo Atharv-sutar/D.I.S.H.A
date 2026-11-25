@@ -106,6 +106,9 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
   queryRef.current = queryParams;
   const userPosRef = useRef(userPosition);
   userPosRef.current = userPosition;
+  const hasPlacedUserRef = useRef(false);
+  const connectionStatusRef = useRef(connectionStatus);
+  connectionStatusRef.current = connectionStatus;
 
   const startSimulationMode = useCallback(() => {
     setConnectionStatus("simulation");
@@ -118,18 +121,33 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
       statusOverride?: ConnectionStatus
     ) => {
       setIsRouting(true);
+      const pos = userPosRef.current;
+      const shouldPreservePlaced =
+        hasPlacedUserRef.current &&
+        params.user_x === undefined &&
+        params.user_y === undefined;
       const enrichedParams: RoutingQueryParams = {
         ...params,
+        ...(shouldPreservePlaced
+          ? {
+              origin: pos.snapped_node_id,
+              user_x: pos.x,
+              user_y: pos.y,
+              user_z: pos.z,
+              user_level: pos.level,
+              heading_deg: pos.heading_deg ?? 0,
+            }
+          : {}),
         fan_id: fanIdRef.current,
       };
       setQueryParams(enrichedParams);
 
-      const effectiveStatus = statusOverride ?? connectionStatus;
+      const effectiveStatus = statusOverride ?? connectionStatusRef.current;
       if (effectiveStatus === "live") {
         try {
           const liveResult = await fetchRoutingRecommend(enrichedParams);
           setGuidance(liveResult);
-          if (liveResult.user_position) {
+          if (liveResult.user_position && !hasPlacedUserRef.current) {
             setUserPosition(liveResult.user_position);
           }
           setIsRouting(false);
@@ -144,16 +162,17 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
         enrichedParams
       );
       setGuidance(mockResult);
-      if (mockResult.user_position) {
+      if (mockResult.user_position && !hasPlacedUserRef.current) {
         setUserPosition(mockResult.user_position);
       }
       setIsRouting(false);
     },
-    [connectionStatus]
+    []
   );
 
   const setUserCoordinates = useCallback(
     async (x: number, y: number, level?: number, headingDeg = 0) => {
+      hasPlacedUserRef.current = true;
       const snappedLocal = snapPositionToNodeClient(
         topologyRef.current,
         x,
@@ -169,7 +188,10 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
         snapped_node_id: snappedLocal.node.id,
       };
 
-      if (connectionStatus === "live") {
+      userPosRef.current = nextPos;
+      setUserPosition(nextPos);
+
+      if (connectionStatusRef.current === "live") {
         try {
           const res = await locateFanPosition({
             fan_id: fanIdRef.current,
@@ -179,13 +201,18 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
             level,
             heading_deg: headingDeg,
           });
-          nextPos = res.user_position;
+          nextPos = {
+            ...res.user_position,
+            x: Number(x.toFixed(1)),
+            y: Number(y.toFixed(1)),
+          };
+          userPosRef.current = nextPos;
+          setUserPosition(nextPos);
         } catch {
           // Use local snap fallback
         }
       }
 
-      setUserPosition(nextPos);
       await runGuidance({
         ...queryRef.current,
         origin: nextPos.snapped_node_id,
@@ -196,7 +223,7 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
         heading_deg: nextPos.heading_deg,
       });
     },
-    [connectionStatus, runGuidance]
+    [runGuidance]
   );
 
   useEffect(() => {
