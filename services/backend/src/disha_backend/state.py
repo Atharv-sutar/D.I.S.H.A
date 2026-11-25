@@ -50,6 +50,7 @@ class StadiumStateStore:
         self.randomizer_enabled: bool = True
         self._last_external_ingest_monotonic: float = 0.0
         self._bottleneck_overrides: dict[str, float] = {}
+        self._cleared_nodes: set[str] = set()
         self._history: deque[TelemetrySnapshot] = deque(maxlen=12)
         self.incidents: dict[str, AlertIncident] = {}
         self.fan_sessions: dict[str, ActiveFanSession] = {}
@@ -208,22 +209,40 @@ class StadiumStateStore:
         inc_map = self._incidents_by_node()
         enriched: list[NodeTelemetry] = []
         for item in snapshot.nodes:
+            score = item.congestion_score
+            status = item.status
+            occ = item.occupancy
+            q_len = item.queue_length
+            wait_min = item.estimated_wait_min
+            if mark_external and item.node_id in self._cleared_nodes:
+                score = 0.22
+                status = "optimal"
+                occ = int(round(item.capacity * score))
+                q_len = max(0, int(round(occ * 0.08)))
+                wait_min = round(q_len / max(8.0, item.capacity * 0.03), 1)
+            elif mark_external and item.node_id in self._bottleneck_overrides:
+                score = self._bottleneck_overrides[item.node_id]
+                status = _score_to_status(score)
+                occ = int(round(item.capacity * score))
+                q_len = max(0, int(round(occ * 0.22)))
+                wait_min = round(q_len / max(8.0, item.capacity * 0.03), 1)
+
             active_ids = inc_map.get(item.node_id, [])
             pulse = max(
                 item.pulse_intensity,
-                min(1.0, item.congestion_score + (0.25 if active_ids else 0.0)),
+                min(1.0, score + (0.25 if active_ids else 0.0)),
             )
             enriched.append(
                 NodeTelemetry(
                     node_id=item.node_id,
-                    occupancy=item.occupancy,
+                    occupancy=occ,
                     capacity=item.capacity,
-                    congestion_score=item.congestion_score,
-                    queue_length=item.queue_length,
-                    estimated_wait_min=item.estimated_wait_min,
+                    congestion_score=score,
+                    queue_length=q_len,
+                    estimated_wait_min=wait_min,
                     flow_rate_per_min=item.flow_rate_per_min,
                     trend=item.trend,
-                    status=item.status,
+                    status=status,
                     pulse_intensity=round(pulse, 3),
                     active_incident_ids=active_ids,
                 )
@@ -251,12 +270,14 @@ class StadiumStateStore:
 
     def set_demo_phase(self, phase: EventPhase) -> TelemetrySnapshot:
         """Switch demo event phase immediately when running standalone."""
+        self._cleared_nodes.clear()
         return self.step_demo_telemetry(phase=phase)
 
     def inject_demo_bottleneck(self, node_id: str, severity: float = 0.92) -> TelemetrySnapshot:
         """Inject a localized demo congestion bottleneck on a node."""
         if node_id not in self.node_map:
             raise KeyError(f"Unknown stadium node_id: {node_id}")
+        self._cleared_nodes.discard(node_id)
         self._bottleneck_overrides[node_id] = min(0.99, max(0.05, severity))
         return self.step_demo_telemetry()
 
@@ -265,6 +286,7 @@ class StadiumStateStore:
         if node_id not in self.node_map:
             raise KeyError(f"Unknown stadium node_id: {node_id}")
         self._bottleneck_overrides.pop(node_id, None)
+        self._cleared_nodes.add(node_id)
         for node_telem in self.latest_telemetry.nodes:
             if node_telem.node_id == node_id:
                 node_telem.congestion_score = 0.22
@@ -282,6 +304,7 @@ class StadiumStateStore:
     def reset_demo_state(self) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
         """Reset all bottlenecks and restore baseline M. Chinnaswamy state."""
         self._bottleneck_overrides.clear()
+        self._cleared_nodes.clear()
         self._tick_count = 0
         self.incidents.clear()
         self._seed_initial_incidents()
@@ -295,6 +318,7 @@ class StadiumStateStore:
     ) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
         """Apply a curated behind-the-scenes demonstration scenario."""
         self._bottleneck_overrides.clear()
+        self._cleared_nodes.clear()
         created_incidents: list[AlertIncident] = []
 
         if preset == "normal_flow":
@@ -393,6 +417,8 @@ class StadiumStateStore:
             node = self.node_map.get(prev.node_id)
             if prev.node_id in self._bottleneck_overrides:
                 next_score = self._bottleneck_overrides[prev.node_id]
+            elif prev.node_id in self._cleared_nodes:
+                next_score = 0.22
             elif not self.randomizer_enabled:
                 next_score = prev.congestion_score
             else:

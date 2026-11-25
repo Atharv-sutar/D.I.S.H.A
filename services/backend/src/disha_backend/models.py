@@ -468,6 +468,7 @@ class SimulationStatusResponse(BaseModel):
     event_phase: EventPhase
     tick_count: int
     bottlenecked_nodes: dict[str, float]
+    cleared_nodes: list[str] = Field(default_factory=list)
     active_incident_count: int
     randomizer_enabled: bool = True
     control_mode: Literal["randomized", "manual"] = "randomized"

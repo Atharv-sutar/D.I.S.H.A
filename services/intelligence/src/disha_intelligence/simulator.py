@@ -166,8 +166,9 @@ class CrowdSimulator:
         )
 
     def clear_bottleneck(self, node_id: str) -> None:
-        """Remove an injected bottleneck and keep node relieved until phase change or re-injection."""
-        if self._bottlenecks.pop(node_id, None) is not None:
+        """Remove any bottleneck or baseline surge and keep node relieved until phase change or re-injection."""
+        self._bottlenecks.pop(node_id, None)
+        if node_id in self._node_map:
             self._recently_cleared.add(node_id)
             self._manual_relief.add(node_id)
 

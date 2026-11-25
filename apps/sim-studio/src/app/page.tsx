@@ -87,6 +87,7 @@ export default function SimulatorStudioPage() {
     incidents,
     activeFans,
     connectionStatus,
+    clearCrowdSurge,
     refreshNow,
   } = useOpsStream();
 
@@ -149,9 +150,9 @@ export default function SimulatorStudioPage() {
 
   const handleClearCongestion = () => {
     if (!selectedNode) return;
-    void runAction(`Cleared congestion at ${selectedNode.name}`, () =>
-      controlBottleneck({ node_id: selectedNode.id, clear: true })
-    );
+    void runAction(`Cleared congestion at ${selectedNode.name}`, async () => {
+      await clearCrowdSurge(selectedNode.id);
+    });
   };
 
   const handleTriggerIncident = (e: React.FormEvent) => {

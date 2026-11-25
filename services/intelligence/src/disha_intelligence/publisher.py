@@ -90,6 +90,10 @@ class SimulationPublisher:
                     if isinstance(v, (int, float))
                 }
                 self.simulator.sync_bottlenecks(parsed)
+            cleared_nodes = data.get("cleared_nodes")
+            if isinstance(cleared_nodes, list):
+                for nid in cleared_nodes:
+                    self.simulator.clear_bottleneck(str(nid))
             if "randomizer_enabled" in data and isinstance(data["randomizer_enabled"], bool):
                 self.simulator.set_randomizer(data["randomizer_enabled"])
             elif data.get("control_mode") in ("randomized", "manual"):
