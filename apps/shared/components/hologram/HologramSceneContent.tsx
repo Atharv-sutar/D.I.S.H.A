@@ -687,7 +687,7 @@ function FacilityPodMarker({
         />
       </mesh>
 
-      {(isSelected || hovered || isOnRoute || (showLabel && node.type !== "concourse")) && (
+      {(isSelected || hovered || isOnRoute) && (
         <Html center distanceFactor={215} position={[0, 4.4, 0]}>
           <button
             type="button"
@@ -1263,7 +1263,7 @@ export function HologramSceneContent({
             sector={sector}
             congestionScore={score}
             isSelected={selectedNodeId === sector.linked_node_id}
-            isGatesOnly={layerFilter === "gates_only" || layerFilter === "route_only"}
+            isGatesOnly={layerFilter === "route_only"}
             onSelect={onSelectNode}
           />
         );
@@ -1274,7 +1274,7 @@ export function HologramSceneContent({
         innerR={spec?.canopy_ring?.inner_radius_m ?? 94}
         outerR={spec?.canopy_ring?.outer_radius_m ?? 132}
         elevationM={spec?.canopy_ring?.elevation_m ?? 26}
-        isGatesOnly={layerFilter === "gates_only" || layerFilter === "route_only"}
+        isGatesOnly={layerFilter === "route_only"}
       />
 
       {/* 4 Symmetrical Floodlight Towers */}
@@ -1320,14 +1320,15 @@ export function HologramSceneContent({
           node.type === "restroom" ||
           node.type === "medical";
         const onRoute = routeSet.has(node.id);
+        const isSelected = selectedNodeId === node.id;
 
-        if (layerFilter === "gates_only" && !isGate && node.type !== "transit") {
+        if (layerFilter === "gates_only" && !isGate && !onRoute && !isSelected) {
           return null;
         }
-        if (layerFilter === "amenities" && !isAmenity && !isGate) {
+        if (layerFilter === "amenities" && !isAmenity && !isGate && !onRoute && !isSelected) {
           return null;
         }
-        if (layerFilter === "route_only" && !onRoute) {
+        if (layerFilter === "route_only" && !onRoute && !isSelected) {
           return null;
         }
 
@@ -1359,16 +1360,15 @@ export function HologramSceneContent({
       })}
 
       {/* Active Incident Beacons */}
-      {layerFilter !== "gates_only" &&
-        activeIncidents.map((inc) => (
-          <IncidentBeacon3D
-            key={inc.incident_id}
-            incident={inc}
-            node={nodeMap.get(inc.node_id)}
-            onSelect={onSelectNode}
-            showLabel={showLabels}
-          />
-        ))}
+      {activeIncidents.map((inc) => (
+        <IncidentBeacon3D
+          key={inc.incident_id}
+          incident={inc}
+          node={nodeMap.get(inc.node_id)}
+          onSelect={onSelectNode}
+          showLabel={showLabels}
+        />
+      ))}
 
       {/* Active Tracked Fans (Ops View) */}
       {activeFans.map((fan, idx) => {

@@ -50,10 +50,10 @@ export interface StadiumHologram3DProps {
 }
 
 const LAYER_TABS: { id: HologramLayerFilter; label: string }[] = [
-  { id: "all", label: "Full Stadium" },
-  { id: "gates_only", label: "Gates Only" },
-  { id: "amenities", label: "Food / WC / Aid" },
+  { id: "gates_only", label: "Gates & Exits" },
   { id: "route_only", label: "Route Focus" },
+  { id: "amenities", label: "Food / WC / Aid" },
+  { id: "all", label: "All Zones" },
 ];
 
 const CAMERA_BUTTONS: { id: CameraPreset; label: string }[] = [
@@ -78,7 +78,7 @@ export function StadiumHologram3D({
   onPlaceUser,
   onQuickWaypoint,
 }: StadiumHologram3DProps) {
-  const [layerFilter, setLayerFilter] = useState<HologramLayerFilter>("all");
+  const [layerFilter, setLayerFilter] = useState<HologramLayerFilter>("gates_only");
   const [placeUserMode, setPlaceUserMode] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
   const [cameraRequest, setCameraRequest] = useState<CameraTargetSpec>({
