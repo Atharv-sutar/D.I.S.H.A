@@ -4,23 +4,25 @@
 
 ## Responsibilities
 
-- FastAPI REST endpoints for stadium topology, live telemetry hydration, fan routing proxy, and incident lifecycle management.
-- Real-time WebSocket broadcasters (`/ws/ops` for Operations Command Dashboard, `/ws/fan` for Fan Navigation App).
-- Ingestion pipeline receiving crowd & alert snapshots from `services/intelligence/` (`Shreyas-D-M`).
-- Payload validation strictly matching [`contracts/schemas/`](../../contracts/schemas/) and [`contracts/openapi/README.md`](../../contracts/openapi/README.md).
+- Serves the canonical **M. Chinnaswamy Stadium** 3D spatial topology & hologram geometry (`GET /api/v1/venue/topology`).
+- Resolves exact fan 3D coordinates inside the stadium (`POST /api/v1/fans/locate`) and computes congestion-aware routes with game-style 3D waypoints (`GET /api/v1/routing/recommend`).
+- Ingests real-time crowd & alert snapshots from `services/intelligence/` (`POST /api/v1/telemetry/ingest`, `POST /api/v1/incidents`).
+- Broadcasts live hologram updates over WebSockets (`/ws/ops` and `/ws/fan`) and supports operator incident dispatch (`PATCH /api/v1/incidents/{incident_id}`).
 
-## Local Development Setup
+## Local Development Setup & Running
 
 ```bash
 cd services/backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate  |  macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
 uvicorn disha_backend.main:app --reload --port 8000
 ```
 
+Interactive Swagger docs: `http://localhost:8000/docs`
+
 ## Running Tests
 
+Works immediately with either `unittest` or `pytest`:
+
 ```bash
-pytest
+PYTHONPATH=services/backend/src python -m unittest discover -s services/backend/tests
 ```

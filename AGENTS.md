@@ -3,17 +3,22 @@
 Welcome to **D.I.S.H.A.** (Smart Stadium Operations and Fan Experience Platform).
 Three developers work concurrently on separate laptops via `https://github.com/Atharv-sutar/D.I.S.H.A.`.
 
-## Mandatory Startup & Sync Protocol
+## Mandatory Startup & Pull-Before-Task Protocol
 
-At the start of every task in this repository:
-1. **Identify the active developer** by reading `.agents/ownership.json` and running `python .agents/scripts/identify_dev.py` (or checking `git config user.name` and `git config user.email`).
+**CRITICAL RULE — ALWAYS PULL BEFORE STARTING ANY NEW TASK**:
+Before beginning any new task, feature, bugfix, or exploration in this repository:
+1. **Identify the active developer** by running `python .agents/scripts/identify_dev.py` (or checking `git config user.name` and `git config user.email` against `.agents/ownership.json`).
    - If the local Git identity does not match `Atharv-sutar`, `Shreyas-D-M`, or `Ankit-Navi-8294`, ask the user once which developer they are and configure local `git config user.name` (or `.agents/.local-dev`).
-2. **Sync with teammate agents** by running `git fetch origin` (and checking `git status` / remote updates) and reading:
+2. **Pull latest remote changes FIRST** before editing or planning code:
+   - Run `git fetch origin` and check `git status -sb`.
+   - If the working tree is clean, immediately run `git pull --rebase origin main` (or use `python .agents/scripts/identify_dev.py --pull`).
+   - If uncommitted local changes prevent rebasing, stash or resolve them cleanly (never discard user work silently) and sync with `origin/main` before starting the new task.
+3. **Read teammate sync context** after pulling:
    - `.agents/sync/status/Atharv-sutar.md`
    - `.agents/sync/status/Shreyas-D-M.md`
    - `.agents/sync/status/Ankit-Navi-8294.md`
    - Recent files in `.agents/sync/handoffs/`
-   - Relevant schemas in `contracts/`
+   - Relevant schemas & venues in `contracts/`
 
 ## Hard Module Ownership Boundaries
 

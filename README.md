@@ -119,7 +119,7 @@ See [`docs/team-workflow.md`](docs/team-workflow.md) and [`docs/architecture.md`
 
 ## Mandatory Git Rules
 
-1. **Pull before starting work**: Always `git pull --rebase origin main` (or sync your feature branch) before writing code.
+1. **ALWAYS pull before starting any new task**: Run `python .agents/scripts/identify_dev.py --pull` (or `git pull --rebase origin main`) before beginning any task.
 2. **Never edit another developer's folder**: Use [`contracts/`](contracts/) and [`.agents/sync/handoffs/`](.agents/sync/handoffs/) to coordinate cross-layer changes.
 3. **Always commit and push after meaningful changes** with a clear Conventional Commit message and your GitHub username:
    ```text

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/alert_incident.schema.json",
   "title": "AlertIncident",
-  "description": "Operational alert or emerging incident detected by analytics or reported by operations.",
+  "description": "Operational alert or emerging incident with optional 3D hologram beacon position.",
   "type": "object",
   "required": [
     "incident_id",
@@ -34,6 +34,17 @@
       "enum": ["open", "acknowledged", "dispatched", "resolved"]
     },
     "node_id": { "type": "string" },
+    "position": {
+      "type": "object",
+      "description": "3D coordinates for holographic incident beacon placement.",
+      "required": ["x", "y", "z", "level"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "level": { "type": "integer" }
+      }
+    },
     "title": { "type": "string" },
     "description": { "type": "string" },
     "recommended_action": { "type": "string" },

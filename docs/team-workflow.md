@@ -34,11 +34,14 @@ git config user.email "<Your-GitHub-Email>"
 python .agents/scripts/identify_dev.py
 ```
 
-## 3. Daily Sync -> Code -> Verify -> Push Loop
+## 3. Daily Pull -> Code -> Verify -> Push Loop
 
-1. **Before coding**:
-   - Pull latest changes: `git pull --rebase origin main`
-   - Run `python .agents/scripts/identify_dev.py` or invoke the `session-sync` skill in Antigravity.
+1. **MANDATORY Pull Before Starting Any New Task**:
+   - Always pull remote changes **before** planning or writing code for any new task:
+     ```bash
+     python .agents/scripts/identify_dev.py --pull
+     ```
+     (Or manually: `git fetch origin && git pull --rebase origin main`.)
    - Check `.agents/sync/status/*.md` and `.agents/sync/handoffs/` for peer updates.
 2. **While coding**:
    - Edit only files in your owned module (`services/backend/`, `services/intelligence/`, or `apps/`).

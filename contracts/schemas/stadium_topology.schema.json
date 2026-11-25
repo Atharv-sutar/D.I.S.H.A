@@ -2,16 +2,70 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/stadium_topology.schema.json",
   "title": "StadiumTopology",
-  "description": "Canonical stadium graph model containing navigable zones, gates, facilities, and walkway edges.",
+  "description": "Canonical 3D spatial stadium graph & hologram geometry model for M. Chinnaswamy Stadium.",
   "type": "object",
   "required": ["venue_id", "venue_name", "levels", "nodes", "edges"],
   "properties": {
     "venue_id": { "type": "string", "minLength": 1 },
     "venue_name": { "type": "string", "minLength": 1 },
+    "city": { "type": "string" },
     "capacity": { "type": "integer", "minimum": 1 },
+    "coordinate_unit": { "type": "string", "default": "meters" },
     "levels": {
       "type": "array",
       "items": { "type": "integer" }
+    },
+    "hologram_spec": {
+      "type": "object",
+      "description": "3D holographic stadium architecture metadata for Three.js / WebGL rendering.",
+      "properties": {
+        "field_radius_m": { "type": "number" },
+        "pitch_length_m": { "type": "number" },
+        "pitch_orientation_deg": { "type": "number" },
+        "ends": {
+          "type": "object",
+          "properties": {
+            "north_end": { "type": "string" },
+            "south_end": { "type": "string" }
+          }
+        },
+        "tier_rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "level", "inner_radius_m", "outer_radius_m", "elevation_m", "height_m"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "level": { "type": "integer" },
+              "inner_radius_m": { "type": "number" },
+              "outer_radius_m": { "type": "number" },
+              "elevation_m": { "type": "number" },
+              "height_m": { "type": "number" }
+            }
+          }
+        },
+        "canopy_ring": {
+          "type": "object",
+          "properties": {
+            "inner_radius_m": { "type": "number" },
+            "outer_radius_m": { "type": "number" },
+            "elevation_m": { "type": "number" }
+          }
+        },
+        "perimeter_roads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "label_x": { "type": "number" },
+              "label_y": { "type": "number" },
+              "angle_deg": { "type": "number" }
+            }
+          }
+        }
+      }
     },
     "nodes": {
       "type": "array",
@@ -26,8 +80,11 @@
             "enum": ["gate", "concourse", "concession", "restroom", "medical", "seating_section", "transit"]
           },
           "level": { "type": "integer" },
-          "x": { "type": "number", "description": "Normalized 0-1000 map X coordinate" },
-          "y": { "type": "number", "description": "Normalized 0-1000 map Y coordinate" },
+          "x": { "type": "number", "description": "Meters East(+)/West(-) from pitch center (0,0,0)" },
+          "y": { "type": "number", "description": "Meters North(+)/South(-) from pitch center (0,0,0)" },
+          "z": { "type": "number", "default": 0, "description": "Elevation in meters above ground plaza" },
+          "stand_code": { "type": "string" },
+          "road_perimeter": { "type": "string" },
           "capacity": { "type": "integer", "minimum": 1 },
           "accessible": { "type": "boolean", "default": true },
           "status": {

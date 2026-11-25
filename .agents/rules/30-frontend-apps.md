@@ -1,19 +1,18 @@
 ---
 trigger: glob
 globs: "apps/**"
-description: "Engineering guidelines for Ankit-Navi-8294's Frontend Apps (Operations Command Dashboard and Fan Experience App)."
+description: "Engineering guidelines for Ankit-Navi-8294's Frontend Apps (3D Hologram Stadium UI, Operations Dashboard, Fan Navigation App)."
 ---
 
 # Frontend Apps Rules (`apps/`)
 
 - **Owner**: `Ankit-Navi-8294` (Ankit Navi)
 - **Sub-Apps**:
-  - `apps/ops-dashboard/` — Stadium Operations Command Center (live stadium congestion heatmap, gate/concession queue monitoring, incident alert triage & dispatch).
-  - `apps/fan-app/` — Fan Experience & Smart Navigation App (first-time visitor wayfinding, least-crowded gate & concession recommendations, live advisories).
-- **Tech Stack**: TypeScript (strict), Next.js / React, Tailwind CSS, WebSocket & REST client hooks.
+  - `apps/ops-dashboard/` — 3D Hologram Operations Command Center (live holographic stadium congestion, pulsing 3D incident beacons, queue monitors, incident dispatch).
+  - `apps/fan-app/` — 3D Hologram Fan Navigation App (exact user 3D location marker, sci-fi wireframe M. Chinnaswamy Stadium hologram, game-style animated 3D waypoint trail & destination beacon).
+- **Tech Stack**: TypeScript (strict), Next.js / React, Tailwind CSS, Three.js / React Three Fiber (`three`, `@react-three/fiber`, `@react-three/drei`) for the 3D hologram, WebSocket & REST hooks.
 
 ## Module Responsibilities
-- Consume backend REST endpoints and WebSocket streams (`/ws/ops` and `/ws/fan`) strictly matching `contracts/schemas/*.json` and `contracts/openapi/README.md`.
-- Design resilient real-time UI states: connection indicator, live/stale telemetry timestamps, optimistic alert acknowledgment, and responsive mobile-first layouts for `fan-app` alongside high-density command-center layouts for `ops-dashboard`.
-- Provide graceful local fallback/mock mode driven by `contracts/` schemas when working offline from the backend.
-- Keep all frontend source, TypeScript interfaces, tests, and builds strictly within `apps/`. Never modify `services/backend/` or `services/intelligence/`.
+- Build the basic working foundation (API/WS hydration, live telemetry & routing state, clean controls) first, then layer the movie-style **M. Chinnaswamy Stadium 3D Hologram** (glowing cyan wireframe tiers, pitch ends, user avatar beacon, congestion aura nodes, floating incident alerts, and animated game-style `waypoints_3d` pathing).
+- Render geometry directly from `GET /api/v1/venue/topology` (`hologram_spec` + 3D `nodes`/`edges`) and `contracts/venues/chinnaswamy_stadium.json` fallback when offline.
+- Keep all frontend source, types (`apps/shared/`), tests, and builds strictly within `apps/`. Never modify `services/backend/` or `services/intelligence/`.

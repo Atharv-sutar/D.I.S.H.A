@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/fan_guidance.schema.json",
   "title": "FanGuidanceResponse",
-  "description": "Optimal entrance/facility recommendation and congestion-aware wayfinding route for fans.",
+  "description": "Optimal entrance/facility recommendation, exact user 3D location, and game-style 3D waypoint trail.",
   "type": "object",
   "required": [
     "venue_id",
@@ -16,6 +16,7 @@
     "time_saved_min",
     "route_node_ids",
     "steps",
+    "waypoints_3d",
     "alternatives"
   ],
   "properties": {
@@ -24,6 +25,32 @@
     "origin_node_id": { "type": "string" },
     "destination_node_id": { "type": "string" },
     "recommended_target_id": { "type": "string" },
+    "user_position": {
+      "type": "object",
+      "description": "Resolved 3D fan location inside the stadium hologram.",
+      "required": ["x", "y", "z", "level", "snapped_node_id"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "level": { "type": "integer" },
+        "heading_deg": { "type": "number", "default": 0 },
+        "snapped_node_id": { "type": "string" }
+      }
+    },
+    "target_beacon": {
+      "type": "object",
+      "description": "Game-style destination marker on the 3D stadium hologram.",
+      "required": ["node_id", "label", "x", "y", "z", "level"],
+      "properties": {
+        "node_id": { "type": "string" },
+        "label": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "level": { "type": "integer" }
+      }
+    },
     "estimated_total_min": { "type": "number", "minimum": 0 },
     "estimated_wait_min": { "type": "number", "minimum": 0 },
     "estimated_walk_min": { "type": "number", "minimum": 0 },
@@ -41,6 +68,28 @@
         "properties": {
           "order": { "type": "integer", "minimum": 1 },
           "node_id": { "type": "string" },
+          "instruction": { "type": "string" },
+          "distance_m": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "waypoints_3d": {
+      "type": "array",
+      "description": "Ordered 3D coordinates for rendering glowing game-style waypoint paths & chevrons.",
+      "items": {
+        "type": "object",
+        "required": ["order", "node_id", "x", "y", "z", "level", "waypoint_type", "instruction", "distance_m"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "node_id": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "z": { "type": "number" },
+          "level": { "type": "integer" },
+          "waypoint_type": {
+            "type": "string",
+            "enum": ["origin", "checkpoint", "level_transition", "reroute_avoidance", "destination"]
+          },
           "instruction": { "type": "string" },
           "distance_m": { "type": "number", "minimum": 0 }
         }

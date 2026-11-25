@@ -1,10 +1,16 @@
-"""Smoke tests for disha_backend scaffold."""
+"""Smoke tests for disha_backend app factory."""
 
-from disha_backend.main import build_health_payload
+import unittest
+
+from disha_backend.main import app
 
 
-def test_build_health_payload() -> None:
-    payload = build_health_payload()
-    assert payload["service"] == "disha-backend"
-    assert payload["status"] == "ok"
-    assert "timestamp" in payload
+class SmokeTests(unittest.TestCase):
+    def test_app_initialized(self) -> None:
+        self.assertIsNotNone(app)
+        route_paths = {getattr(r, "path", "") for r in app.routes}
+        self.assertIn("/health", route_paths)
+        self.assertIn("/api/v1/venue/topology", route_paths)
+        self.assertIn("/api/v1/routing/recommend", route_paths)
+        self.assertIn("/ws/ops", route_paths)
+        self.assertIn("/ws/fan", route_paths)

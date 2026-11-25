@@ -1,7 +1,8 @@
-"""Identify the active D.I.S.H.A. developer and print their module scope and peer status."""
+"""Identify the active D.I.S.H.A. developer, check/pull remote sync status, and print peer logs."""
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -20,14 +21,19 @@ def load_ownership() -> dict[str, Any]:
     return json.loads(OWNERSHIP_FILE.read_text(encoding="utf-8"))
 
 
-def run_git(*args: str) -> str:
-    """Run a git command in REPO_ROOT and return stripped stdout, or '' on error."""
-    result = subprocess.run(
+def run_git_result(*args: str) -> subprocess.CompletedProcess[str]:
+    """Run a git command in REPO_ROOT and return the CompletedProcess."""
+    return subprocess.run(
         ["git", "-C", str(REPO_ROOT), *args],
         capture_output=True,
         text=True,
         check=False,
     )
+
+
+def run_git(*args: str) -> str:
+    """Run a git command in REPO_ROOT and return stripped stdout, or '' on error."""
+    result = run_git_result(*args)
     if result.returncode != 0:
         return ""
     return result.stdout.strip()
@@ -79,6 +85,41 @@ def resolve_developer(ownership: dict[str, Any]) -> tuple[str | None, str, dict[
     return None, "unresolved", git_info
 
 
+def sync_with_remote(pull: bool) -> str:
+    """Fetch origin and optionally pull --rebase origin main if working tree is clean."""
+    fetch_res = run_git_result("fetch", "origin")
+    if fetch_res.returncode != 0:
+        return f"Fetch skipped/failed: {fetch_res.stderr.strip() or 'offline'}"
+
+    counts = run_git("rev-list", "--left-right", "--count", "HEAD...origin/main")
+    ahead, behind = (0, 0)
+    if counts and len(counts.split()) == 2:
+        ahead, behind = (int(x) for x in counts.split())
+
+    dirty = bool(run_git("status", "--porcelain"))
+    if not pull:
+        if behind > 0:
+            return (
+                f"BEHIND origin/main by {behind} commit(s) (ahead {ahead}). "
+                "Run `git pull --rebase origin main` before starting any new task."
+            )
+        return f"Up to date with origin/main (ahead {ahead}, behind {behind})."
+
+    if behind == 0:
+        return f"Already up to date with origin/main (ahead {ahead})."
+
+    if dirty:
+        return (
+            f"BLOCKED PULL: Local branch is behind origin/main by {behind} commit(s), "
+            "but working tree has uncommitted changes. Stash or commit owned work before pulling."
+        )
+
+    pull_res = run_git_result("pull", "--rebase", "origin", "main")
+    if pull_res.returncode != 0:
+        return f"REBASE FAILED: {pull_res.stderr.strip() or pull_res.stdout.strip()}"
+    return f"Pulled and rebased {behind} commit(s) from origin/main cleanly."
+
+
 def print_peer_sync_summary(active_handle: str | None) -> None:
     """Display status headlines and open handoffs for cross-agent synchronization."""
     status_dir = REPO_ROOT / ".agents" / "sync" / "status"
@@ -107,12 +148,27 @@ def print_peer_sync_summary(active_handle: str | None) -> None:
 
 def main() -> int:
     """CLI entrypoint for developer identity detection and sync overview."""
+    parser = argparse.ArgumentParser(description="Identify active D.I.S.H.A. developer and check sync.")
+    parser.add_argument(
+        "--pull",
+        action="store_true",
+        help="Fetch origin and run `git pull --rebase origin main` when working tree is clean.",
+    )
+    parser.add_argument(
+        "--no-fetch",
+        action="store_true",
+        help="Skip remote fetch check (offline mode).",
+    )
+    args = parser.parse_args()
+
     ownership = load_ownership()
+    sync_msg = "Remote check skipped (--no-fetch)." if args.no_fetch else sync_with_remote(pull=args.pull)
     handle, source, git_info = resolve_developer(ownership)
 
     print("=== D.I.S.H.A. Developer Identity & Scope ===")
     print(f"Repository Root : {REPO_ROOT}")
     print(f"Git Branch/HEAD : {git_info['branch'] or '?'} @ {git_info['head'] or 'unborn'}")
+    print(f"Remote Sync     : {sync_msg}")
     print(f"Git Config User : {git_info['user.name'] or '<unset>'} <{git_info['user.email'] or 'unset'}>")
 
     if not handle:
@@ -120,7 +176,7 @@ def main() -> int:
         print("\nACTION REQUIRED: Configure local Git identity to match one team profile:")
         for dev_handle, dev_info in ownership["developers"].items():
             print(f"  - {dev_handle} ({dev_info['display_name']}): owns {', '.join(dev_info['owned_paths'])}")
-        print("Example: git config user.name \"Shreyas-D-M\"")
+        print('Example: git config user.name "Shreyas-D-M"')
         return 2
 
     dev = ownership["developers"][handle]

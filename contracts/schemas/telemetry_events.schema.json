@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/telemetry_events.schema.json",
   "title": "TelemetrySnapshot",
-  "description": "Real-time crowd density, queue length, and wait-time snapshot across stadium nodes.",
+  "description": "Real-time crowd density, queue length, wait-time, and hologram overlay snapshot across stadium nodes.",
   "type": "object",
   "required": ["venue_id", "timestamp", "event_phase", "nodes"],
   "properties": {
@@ -44,6 +44,16 @@
           "status": {
             "type": "string",
             "enum": ["optimal", "moderate", "high", "critical", "closed"]
+          },
+          "pulse_intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Hologram glow/pulse intensity driven by congestion and active incidents"
+          },
+          "active_incident_ids": {
+            "type": "array",
+            "items": { "type": "string" }
           }
         }
       }
