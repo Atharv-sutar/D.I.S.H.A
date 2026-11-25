@@ -57,7 +57,7 @@ export function IncidentFeed({
   }, [incidents, showResolved]);
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+    <section className="flex h-full flex-col rounded-xl border border-zinc-800 bg-zinc-900/90 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Siren className="h-4 w-4 text-red-400" />
@@ -68,7 +68,7 @@ export function IncidentFeed({
         <button
           type="button"
           onClick={() => setShowResolved((v) => !v)}
-          className="rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white"
+          className="rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:text-white"
         >
           {showResolved ? "Hide Resolved" : "Show Resolved"}
         </button>
@@ -76,7 +76,7 @@ export function IncidentFeed({
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-0.5">
         {sorted.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-6 text-center text-xs text-slate-400">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 text-center text-xs text-zinc-400">
             No active operational incidents. All stadium zones within nominal thresholds.
           </div>
         ) : (
@@ -86,7 +86,7 @@ export function IncidentFeed({
             return (
               <article
                 key={inc.incident_id}
-                className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 transition hover:border-slate-700"
+                className="rounded-xl border border-zinc-800 bg-zinc-950/85 p-3.5 transition hover:border-zinc-700"
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -104,12 +104,12 @@ export function IncidentFeed({
                     >
                       {inc.status}
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-zinc-400">
                       {formatRelativeSeconds(inc.created_at)}
                     </span>
                   </div>
                   {inc.confidence !== undefined && (
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-zinc-400">
                       Conf: {Math.round(inc.confidence * 100)}%
                     </span>
                   )}
@@ -118,37 +118,37 @@ export function IncidentFeed({
                 <button
                   type="button"
                   onClick={() => onFocusNode(inc.node_id)}
-                  className="text-left text-sm font-semibold text-white hover:text-indigo-300"
+                  className="text-left text-sm font-semibold text-white hover:text-teal-300"
                 >
                   {inc.title}
                 </button>
-                <p className="mt-1 text-xs text-slate-400">{inc.description}</p>
+                <p className="mt-1 text-xs text-zinc-400">{inc.description}</p>
 
-                <div className="mt-2 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1.5 text-xs text-indigo-200">
+                <div className="mt-2 rounded-lg border border-teal-500/25 bg-teal-500/10 px-2.5 py-1.5 text-xs text-teal-200">
                   <span className="font-semibold">Action: </span>
                   {inc.recommended_action}
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400">
                   <span>
                     Zone:{" "}
                     <button
                       type="button"
                       onClick={() => onFocusNode(inc.node_id)}
-                      className="font-medium text-sky-300 underline-offset-2 hover:underline"
+                      className="font-medium text-cyan-300 underline-offset-2 hover:underline"
                     >
                       {nodeNames.get(inc.node_id) ?? inc.node_id}
                     </button>
                   </span>
                   {inc.assigned_team && (
-                    <span className="text-slate-300">
+                    <span className="text-zinc-300">
                       Team: <strong>{inc.assigned_team}</strong>
                     </span>
                   )}
                 </div>
 
                 {inc.status !== "resolved" && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800/80 pt-2.5">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800/80 pt-2.5">
                     <select
                       aria-label="Assign response team"
                       value={teamValue}
@@ -158,7 +158,7 @@ export function IncidentFeed({
                           [inc.incident_id]: e.target.value,
                         }))
                       }
-                      className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                      className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
                     >
                       {TEAMS.map((team) => (
                         <option key={team} value={team}>
@@ -191,7 +191,7 @@ export function IncidentFeed({
                             teamValue
                           )
                         }
-                        className="inline-flex items-center gap-1 rounded-md border border-indigo-500/40 bg-indigo-500/20 px-2.5 py-1 text-xs font-medium text-indigo-200 hover:bg-indigo-500/30"
+                        className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 bg-teal-500/20 px-2.5 py-1 text-xs font-medium text-teal-200 hover:bg-teal-500/30"
                       >
                         <Send className="h-3.5 w-3.5" />
                         Dispatch

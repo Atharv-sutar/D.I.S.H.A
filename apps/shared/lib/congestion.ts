@@ -45,10 +45,10 @@ const STATUS_VISUALS: Record<CongestionLevel, CongestionVisuals> = {
   },
   closed: {
     label: "Closed",
-    hex: "#64748b",
-    bgClass: "bg-slate-600/20",
-    textClass: "text-slate-300",
-    borderClass: "border-slate-500/40",
+    hex: "#71717a",
+    bgClass: "bg-zinc-600/20",
+    textClass: "text-zinc-300",
+    borderClass: "border-zinc-500/40",
   },
 };
 
@@ -85,7 +85,7 @@ export function getIncidentStatusClass(status: IncidentStatus): string {
     case "acknowledged":
       return "bg-amber-500/15 text-amber-300 border-amber-500/40";
     case "dispatched":
-      return "bg-indigo-500/15 text-indigo-300 border-indigo-500/40";
+      return "bg-teal-500/15 text-teal-300 border-teal-500/40";
     case "resolved":
       return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
   }

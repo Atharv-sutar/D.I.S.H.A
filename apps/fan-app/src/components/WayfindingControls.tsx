@@ -142,10 +142,10 @@ export function WayfindingControls({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3.5">
+    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 space-y-3.5">
       {/* Seat Ticket Detection + Walk Simulator */}
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-xl border border-amber-500/30 bg-slate-950/75 p-3 space-y-2">
+        <div className="rounded-xl border border-amber-500/35 bg-zinc-950/85 p-3 space-y-2">
           <form onSubmit={handleSeatSubmit} className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
               <Ticket className="h-4 w-4" />
@@ -156,11 +156,11 @@ export function WayfindingControls({
               value={seatInput}
               onChange={(e) => setSeatInput(e.target.value)}
               placeholder="e.g. E-12-45, F1-06-18, H-08-14"
-              className="min-w-[150px] flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+              className="min-w-[150px] flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-500 focus:border-amber-400 focus:outline-none"
             />
             <button
               type="submit"
-              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-amber-400"
+              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-zinc-950 transition hover:bg-amber-400"
             >
               Detect Seat
             </button>
@@ -168,7 +168,7 @@ export function WayfindingControls({
               <button
                 type="button"
                 onClick={onNavigateToSeat}
-                className="rounded-lg border border-cyan-400/60 bg-cyan-500/20 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-500/30"
+                className="rounded-lg border border-rose-500/60 bg-rose-600/20 px-2.5 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/35"
               >
                 Navigate to Seat
               </button>
@@ -176,7 +176,7 @@ export function WayfindingControls({
           </form>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-slate-400">Quick seats:</span>
+            <span className="text-[10px] text-zinc-400">Quick seats:</span>
             {SAMPLE_SEAT_TICKETS.map((sample) => (
               <button
                 key={sample}
@@ -188,7 +188,7 @@ export function WayfindingControls({
                 className={`rounded border px-1.5 py-0.5 text-[10px] font-medium transition ${
                   detectedSeat?.normalizedLabel === sample
                     ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                    : "border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200"
+                    : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 {sample}
@@ -209,10 +209,10 @@ export function WayfindingControls({
         </div>
 
         {/* Person Walk Simulator */}
-        <div className="rounded-xl border border-cyan-500/30 bg-slate-950/75 p-3 space-y-2">
+        <div className="rounded-xl border border-rose-500/30 bg-zinc-950/85 p-3 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-200">
-              <Footprints className="h-4 w-4 text-cyan-400" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-200">
+              <Footprints className="h-4 w-4 text-rose-400" />
               <span>Walk Simulation</span>
               {seatedAtSeat && detectedSeat && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
@@ -226,7 +226,7 @@ export function WayfindingControls({
                 <button
                   type="button"
                   onClick={onWalkPause}
-                  className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-amber-400"
+                  className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-zinc-950 hover:bg-amber-400"
                 >
                   <Pause className="h-3.5 w-3.5" /> Pause
                 </button>
@@ -234,7 +234,7 @@ export function WayfindingControls({
                 <button
                   type="button"
                   onClick={onWalkStart}
-                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-emerald-400"
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-bold text-zinc-950 hover:bg-emerald-400"
                 >
                   <Play className="h-3.5 w-3.5" />
                   {walkStatus === "paused"
@@ -248,7 +248,7 @@ export function WayfindingControls({
               <button
                 type="button"
                 onClick={onWalkReset}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 hover:border-slate-600"
+                className="inline-flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-600"
               >
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
@@ -256,21 +256,21 @@ export function WayfindingControls({
               <button
                 type="button"
                 onClick={() => onWalkSpeedChange(walkSpeed === 1 ? 2 : 1)}
-                className="rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-cyan-200"
+                className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-200"
               >
                 {walkSpeed}x
               </button>
             </div>
           </div>
 
-          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+          <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
             <div
-              className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-150"
+              className="h-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-150"
               style={{ width: `${Math.round(walkProgress * 100)}%` }}
             />
           </div>
 
-          <p className="truncate text-[11px] text-slate-300">
+          <p className="truncate text-[11px] text-zinc-300">
             {walkStatus === "arrived"
               ? `Arrived! Current location updated to ${activeWaypoint?.node_id ?? "destination"}.`
               : walkStatus === "walking"
@@ -283,7 +283,7 @@ export function WayfindingControls({
       {/* Origin / Destination Selectors */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-emerald-400" />
+          <MapPin className="h-4 w-4 text-rose-400" />
           <h2 className="text-sm font-semibold text-white">
             Where are you now &amp; where to?
           </h2>
@@ -296,8 +296,8 @@ export function WayfindingControls({
           }
           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
             params.accessible
-              ? "border-sky-400/60 bg-sky-500/20 text-sky-200"
-              : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-600"
+              ? "border-amber-400/60 bg-amber-500/20 text-amber-200"
+              : "border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-600"
           }`}
         >
           <Accessibility className="h-3.5 w-3.5" />
@@ -307,7 +307,7 @@ export function WayfindingControls({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-xs">
-          <span className="mb-1 block font-medium text-slate-300">
+          <span className="mb-1 block font-medium text-zinc-300">
             Current Location / Gate {seatedAtSeat ? "(At Your Seat)" : ""}
           </span>
           <select
@@ -321,7 +321,7 @@ export function WayfindingControls({
                 user_level: undefined,
               })
             }
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:border-rose-500 focus:outline-none"
           >
             {originOptions.map((node) => (
               <option key={node.id} value={node.id}>
@@ -332,7 +332,7 @@ export function WayfindingControls({
         </label>
 
         <label className="block text-xs">
-          <span className="mb-1 block font-medium text-slate-300">
+          <span className="mb-1 block font-medium text-zinc-300">
             Specific Destination (Optional)
           </span>
           <select
@@ -343,7 +343,7 @@ export function WayfindingControls({
                 target_id: e.target.value || undefined,
               })
             }
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:border-rose-500 focus:outline-none"
           >
             <option value="">Auto-pick least crowded (Recommended)</option>
             {targetCandidates.map((node) => (
@@ -376,18 +376,18 @@ export function WayfindingControls({
               }
               className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition ${
                 active
-                  ? "border-emerald-500/60 bg-emerald-500/15 text-white"
-                  : "border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-700"
+                  ? "border-rose-500/70 bg-rose-600/20 text-white"
+                  : "border-zinc-800 bg-zinc-950/75 text-zinc-300 hover:border-zinc-700"
               }`}
             >
-              <span className={active ? "text-emerald-300" : "text-slate-400"}>
+              <span className={active ? "text-amber-300" : "text-zinc-400"}>
                 {intent.icon}
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs font-semibold">
                   {intent.label}
                 </span>
-                <span className="block text-[10px] text-slate-400">
+                <span className="block text-[10px] text-zinc-400">
                   {intent.subtitle}
                 </span>
               </span>

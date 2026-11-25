@@ -68,7 +68,7 @@ export function OpsHeader({
     if (connectionStatus === "simulation") {
       return {
         label: "Sim Stream",
-        cls: "bg-indigo-500/15 text-indigo-300 border-indigo-500/40",
+        cls: "bg-teal-500/15 text-teal-300 border-teal-500/40",
         icon: <Radio className="h-3.5 w-3.5" />,
       };
     }
@@ -87,10 +87,10 @@ export function OpsHeader({
   })();
 
   return (
-    <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+    <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40">
             <Activity className="h-5 w-5" />
           </div>
           <div>
@@ -98,13 +98,13 @@ export function OpsHeader({
               <h1 className="text-base font-bold tracking-tight text-white sm:text-lg">
                 D.I.S.H.A. Operations Command
               </h1>
-              <span className="rounded-full border border-sky-500/40 bg-sky-500/15 px-2.5 py-0.5 text-xs font-medium text-sky-300">
+              <span className="rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2.5 py-0.5 text-xs font-medium text-cyan-300">
                 {formatEventPhase(telemetry.event_phase)}
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-zinc-400">
               {venueName} · Venue ID:{" "}
-              <span className="font-mono text-slate-300">
+              <span className="font-mono text-zinc-300">
                 {telemetry.venue_id}
               </span>
             </p>
@@ -112,31 +112,31 @@ export function OpsHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-4 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-1.5 text-xs">
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <Users className="h-3.5 w-3.5 text-indigo-400" />
-              <span className="text-slate-400">Est. Crowd:</span>
+          <div className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/90 px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-zinc-300">
+              <Users className="h-3.5 w-3.5 text-teal-400" />
+              <span className="text-zinc-400">Est. Crowd:</span>
               <span className="font-semibold text-white">
                 {(telemetry.total_attendance_estimate ?? 0).toLocaleString()}
               </span>
             </div>
-            <span className="h-3.5 w-px bg-slate-800" />
+            <span className="h-3.5 w-px bg-zinc-800" />
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
-              <span className="text-slate-400">Hotspots:</span>
+              <span className="text-zinc-400">Hotspots:</span>
               <span className="font-semibold text-orange-300">
                 {criticalCount}
               </span>
             </div>
-            <span className="h-3.5 w-px bg-slate-800" />
+            <span className="h-3.5 w-px bg-zinc-800" />
             <div>
-              <span className="text-slate-400">Active Alerts: </span>
+              <span className="text-zinc-400">Active Alerts: </span>
               <span className="font-semibold text-red-300">{openAlerts}</span>
             </div>
-            <span className="hidden h-3.5 w-px bg-slate-800 md:inline-block" />
+            <span className="hidden h-3.5 w-px bg-zinc-800 md:inline-block" />
             <div className="hidden md:block">
-              <span className="text-slate-400">Avg Wait: </span>
-              <span className="font-semibold text-slate-100">{avgWait}m</span>
+              <span className="text-zinc-400">Avg Wait: </span>
+              <span className="font-semibold text-zinc-100">{avgWait}m</span>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export function OpsHeader({
             </span>
           </div>
 
-          <div className="flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 text-xs">
+          <div className="flex rounded-lg border border-zinc-800 bg-zinc-900 p-0.5 text-xs">
             {MODE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -158,8 +158,8 @@ export function OpsHeader({
                 onClick={() => onModeChange(opt.value)}
                 className={`rounded-md px-2.5 py-1 font-medium transition ${
                   mode === opt.value
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-teal-600 text-white"
+                    : "text-zinc-400 hover:text-zinc-100"
                 }`}
               >
                 {opt.label}
@@ -171,7 +171,7 @@ export function OpsHeader({
             type="button"
             onClick={onRefresh}
             title="Reconnect / Refresh Telemetry"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-slate-300 transition hover:border-slate-700 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>

@@ -25,15 +25,15 @@ export function AdvisoryBanner({
     <section
       className={`rounded-2xl border p-3.5 transition ${
         isWarning
-          ? "border-amber-500/40 bg-amber-500/10"
-          : "border-sky-500/35 bg-sky-500/10"
+          ? "border-rose-500/40 bg-rose-500/10"
+          : "border-amber-500/35 bg-amber-500/10"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
           <Bell
             className={`mt-0.5 h-4 w-4 shrink-0 ${
-              isWarning ? "text-amber-300" : "text-sky-300"
+              isWarning ? "text-rose-300" : "text-amber-300"
             }`}
           />
           <div>
@@ -41,11 +41,11 @@ export function AdvisoryBanner({
               <span className="text-xs font-bold uppercase tracking-wide text-white">
                 {latest.title}
               </span>
-              <span className="text-[11px] text-slate-300/80">
+              <span className="text-[11px] text-zinc-300/80">
                 {formatRelativeSeconds(latest.timestamp)}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-slate-200">{latest.message}</p>
+            <p className="mt-0.5 text-xs text-zinc-200">{latest.message}</p>
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export function AdvisoryBanner({
               type="button"
               onClick={() => setExpanded((v) => !v)}
               aria-label="Toggle live advisories"
-              className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-1.5 text-slate-300 hover:text-white"
+              className="rounded-lg border border-zinc-700/70 bg-zinc-900/70 p-1.5 text-zinc-300 hover:text-white"
             >
               {expanded ? (
                 <ChevronUp className="h-3.5 w-3.5" />
@@ -78,17 +78,17 @@ export function AdvisoryBanner({
       </div>
 
       {expanded && advisories.length > 1 && (
-        <div className="mt-3 space-y-2 border-t border-slate-700/50 pt-2.5">
+        <div className="mt-3 space-y-2 border-t border-zinc-700/50 pt-2.5">
           {advisories.slice(1, 5).map((adv) => (
             <div
               key={`${adv.advisory_id}-${adv.timestamp}`}
-              className="flex items-center justify-between gap-2 text-xs text-slate-300"
+              className="flex items-center justify-between gap-2 text-xs text-zinc-300"
             >
               <div>
                 <span className="font-medium text-white">{adv.title}: </span>
                 <span>{adv.message}</span>
               </div>
-              <span className="shrink-0 text-[10px] text-slate-400">
+              <span className="shrink-0 text-[10px] text-zinc-400">
                 {formatRelativeSeconds(adv.timestamp)}
               </span>
             </div>

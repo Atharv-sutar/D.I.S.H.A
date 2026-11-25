@@ -106,13 +106,13 @@ export function StadiumHologram3D({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-700/80 bg-[#060d1b] shadow-2xl">
+    <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-[#09090b] shadow-2xl">
       {/* Top Camera & View Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/95 px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-950/95 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <Compass className="h-4 w-4 text-sky-400" />
+          <Compass className="h-4 w-4 text-amber-400" />
           <h2 className="text-sm font-semibold text-white">{title}</h2>
-          <span className="hidden rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300 md:inline-block">
+          <span className="hidden rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300 md:inline-block">
             Drag: Look Around • Scroll: Zoom • Right-Drag: Pan
           </span>
         </div>
@@ -125,11 +125,11 @@ export function StadiumHologram3D({
                 key={btn.id}
                 type="button"
                 onClick={() => triggerCamera(btn.id)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-sky-400 hover:bg-sky-500/15"
+                className="inline-flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-zinc-200 transition hover:border-amber-400 hover:bg-amber-500/15"
               >
-                {btn.id === "aerial" && <RotateCcw className="h-3 w-3 text-sky-400" />}
-                {btn.id === "follow_me" && <Crosshair className="h-3 w-3 text-sky-400" />}
-                {btn.id === "pitch_view" && <Eye className="h-3 w-3 text-sky-400" />}
+                {btn.id === "aerial" && <RotateCcw className="h-3 w-3 text-amber-400" />}
+                {btn.id === "follow_me" && <Crosshair className="h-3 w-3 text-amber-400" />}
+                {btn.id === "pitch_view" && <Eye className="h-3 w-3 text-amber-400" />}
                 <span>{btn.label}</span>
               </button>
             );
@@ -140,8 +140,8 @@ export function StadiumHologram3D({
             onClick={() => setShowLabels((s) => !s)}
             className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition ${
               showLabels
-                ? "border-sky-500/60 bg-sky-500/15 text-sky-100"
-                : "border-slate-700 bg-slate-900 text-slate-400"
+                ? "border-amber-500/60 bg-amber-500/15 text-amber-100"
+                : "border-zinc-700 bg-zinc-900 text-zinc-400"
             }`}
           >
             <Tag className="h-3 w-3" />
@@ -155,7 +155,7 @@ export function StadiumHologram3D({
               className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
                 placeUserMode
                   ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
-                  : "border-slate-700 bg-slate-900 text-slate-200 hover:border-sky-400"
+                  : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-amber-400"
               }`}
             >
               <MapPin className="h-3 w-3" />
@@ -166,9 +166,9 @@ export function StadiumHologram3D({
       </div>
 
       {/* Filter & Quick Navigation Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/90 px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Layers className="mr-0.5 h-3.5 w-3.5 text-sky-400" />
+          <Layers className="mr-0.5 h-3.5 w-3.5 text-rose-400" />
           {LAYER_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -176,8 +176,8 @@ export function StadiumHologram3D({
               onClick={() => setLayerFilter(tab.id)}
               className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
                 layerFilter === tab.id
-                  ? "bg-sky-500 text-slate-950 font-semibold"
-                  : "bg-slate-950/70 text-slate-300 hover:bg-slate-800"
+                  ? "bg-rose-600 text-white font-semibold shadow-sm"
+                  : "bg-zinc-950/75 text-zinc-300 hover:bg-zinc-800"
               }`}
             >
               {tab.id === "gates_only" && <DoorOpen className="h-3.5 w-3.5" />}
@@ -192,28 +192,28 @@ export function StadiumHologram3D({
             <button
               type="button"
               onClick={() => onQuickWaypoint("exit")}
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-slate-950 transition hover:bg-emerald-400"
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-zinc-950 transition hover:bg-emerald-400"
             >
               <LogOut className="h-3.5 w-3.5" /> Best Exit (Low Crowd)
             </button>
             <button
               type="button"
               onClick={() => onQuickWaypoint("entry")}
-              className="rounded-lg border border-sky-500/40 bg-sky-500/15 px-2.5 py-1 text-xs font-semibold text-sky-200 hover:bg-sky-500/25"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-500/25"
             >
               Best Entry
             </button>
             <button
               type="button"
               onClick={() => onQuickWaypoint("concession")}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-200 hover:border-slate-500"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1 text-xs font-medium text-zinc-200 hover:border-zinc-500"
             >
               Food
             </button>
             <button
               type="button"
               onClick={() => onQuickWaypoint("restroom")}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-200 hover:border-slate-500"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1 text-xs font-medium text-zinc-200 hover:border-zinc-500"
             >
               Restroom
             </button>
@@ -252,7 +252,7 @@ export function StadiumHologram3D({
         </Canvas>
 
         {/* Bottom-Left Compact Legend */}
-        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2.5 rounded-xl border border-slate-700/80 bg-slate-950/85 px-3 py-1.5 text-[10px] text-slate-200 backdrop-blur">
+        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2.5 rounded-xl border border-zinc-700/80 bg-zinc-950/85 px-3 py-1.5 text-[10px] text-zinc-200 backdrop-blur">
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-400" /> Low Crowd / Exit
           </span>
@@ -272,11 +272,11 @@ export function StadiumHologram3D({
 
         {/* Bottom-Right Selected Location Inspector */}
         {selectedNode && selectedTelem && selectedVisuals && (
-          <div className="absolute bottom-3 right-3 w-64 rounded-xl border border-slate-700 bg-slate-950/92 p-3 text-xs shadow-xl backdrop-blur">
+          <div className="absolute bottom-3 right-3 w-64 rounded-xl border border-zinc-700 bg-zinc-950/92 p-3 text-xs shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-white">{selectedNode.name}</p>
-                <p className="text-[10px] uppercase tracking-wider text-sky-300">
+                <p className="text-[10px] uppercase tracking-wider text-amber-300">
                   Level {selectedNode.level} • {selectedNode.type.replace("_", " ")}
                   {selectedNode.gate_role
                     ? ` (${selectedNode.gate_role.replace("_", "/")})`
@@ -290,20 +290,20 @@ export function StadiumHologram3D({
               </span>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-              <div className="rounded bg-slate-900 px-1.5 py-1">
-                <p className="text-[10px] text-slate-400">Crowd</p>
+              <div className="rounded bg-zinc-900 px-1.5 py-1">
+                <p className="text-[10px] text-zinc-400">Crowd</p>
                 <p className="font-semibold text-white">
                   {Math.round(selectedTelem.congestion_score * 100)}%
                 </p>
               </div>
-              <div className="rounded bg-slate-900 px-1.5 py-1">
-                <p className="text-[10px] text-slate-400">Wait</p>
+              <div className="rounded bg-zinc-900 px-1.5 py-1">
+                <p className="text-[10px] text-zinc-400">Wait</p>
                 <p className="font-semibold text-white">
                   {selectedTelem.estimated_wait_min}m
                 </p>
               </div>
-              <div className="rounded bg-slate-900 px-1.5 py-1">
-                <p className="text-[10px] text-slate-400">Queue</p>
+              <div className="rounded bg-zinc-900 px-1.5 py-1">
+                <p className="text-[10px] text-zinc-400">Queue</p>
                 <p className="font-semibold text-white">
                   {selectedTelem.queue_length}
                 </p>

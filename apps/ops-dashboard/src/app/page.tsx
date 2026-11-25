@@ -17,8 +17,8 @@ const StadiumHologram3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[520px] items-center justify-center rounded-2xl border border-cyan-500/30 bg-[#030816] text-xs font-medium text-cyan-300">
-        Initializing M. Chinnaswamy 3D Operations Hologram...
+      <div className="flex h-[520px] items-center justify-center rounded-2xl border border-teal-500/30 bg-[#09090b] text-xs font-medium text-teal-300">
+        Initializing M. Chinnaswamy 3D Operations Digital Twin...
       </div>
     ),
   }
@@ -45,7 +45,7 @@ export default function OpsDashboardPage() {
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <OpsHeader
         venueName={topology.venue_name}
         telemetry={telemetry}
@@ -61,32 +61,32 @@ export default function OpsDashboardPage() {
       <main className="mx-auto grid max-w-[1600px] gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-zinc-400">
               Live M. Chinnaswamy Stadium Operations View • Tracked Fans:{" "}
-              <span className="font-semibold text-cyan-300">
+              <span className="font-semibold text-teal-300">
                 {activeFans.length}
               </span>
             </p>
-            <div className="inline-flex rounded-xl border border-slate-800 bg-slate-900 p-1 text-xs">
+            <div className="inline-flex rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setViewMode("3d")}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
                   viewMode === "3d"
-                    ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-teal-500/20 text-teal-200 ring-1 ring-teal-400/50"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 <Box className="h-3.5 w-3.5" />
-                <span>3D Hologram</span>
+                <span>3D Stadium</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("2d")}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
                   viewMode === "2d"
-                    ? "bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-400/50"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 <Layers className="h-3.5 w-3.5" />

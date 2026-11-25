@@ -25,8 +25,8 @@ const StadiumHologram3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[500px] items-center justify-center rounded-2xl border border-cyan-500/30 bg-[#030816] text-xs font-medium text-cyan-300">
-        Initializing M. Chinnaswamy 3D Hologram...
+      <div className="flex h-[500px] items-center justify-center rounded-2xl border border-rose-500/30 bg-[#09090b] text-xs font-medium text-amber-300">
+        Initializing M. Chinnaswamy 3D Digital Twin...
       </div>
     ),
   }
@@ -200,7 +200,7 @@ export default function FanAppPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <FanHeader
         venueName={topology.venue_name}
         eventPhase={telemetry.event_phase}
@@ -217,29 +217,29 @@ export default function FanAppPage() {
         />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-zinc-400">
             Interactive M. Chinnaswamy Stadium Digital Twin — enter your seat ticket, walk to your seat, then navigate anywhere from your seat.
           </p>
-          <div className="inline-flex rounded-xl border border-slate-800 bg-slate-900 p-1 text-xs">
+          <div className="inline-flex rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-xs">
             <button
               type="button"
               onClick={() => setViewMode("3d")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
                 viewMode === "3d"
-                  ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-rose-600/25 text-amber-200 ring-1 ring-rose-500/60"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               <Box className="h-3.5 w-3.5" />
-              <span>3D Hologram</span>
+              <span>3D Stadium</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode("2d")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
                 viewMode === "2d"
-                  ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/50"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/50"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               <MapIcon className="h-3.5 w-3.5" />

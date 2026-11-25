@@ -10,11 +10,11 @@
   - Added `gate_role` (`entry | exit | entry_exit`), `floodlight_towers`, and `stand_sectors` in `contracts/venues/chinnaswamy_stadium.json` & `models.py` (preserving exact 26 nodes / 38 edges for `services/intelligence/` compatibility).
   - Added `route_mode` (`entry | exit | facility`) support in `routing.py` & `GET /api/v1/routing/recommend` for dedicated entry/exit/destination waypoint paths.
   - All 7 backend unit & ASGI end-to-end tests passing.
-- **3D Stadium Hologram (`apps/`, one-time user override)**:
+- **3D Stadium Digital Twin & UI Redesign (`apps/`, one-time user override)**:
   - Installed `three`, `@types/three`, `@react-three/fiber@^8.17.10`, `@react-three/drei@^9.117.3` in `apps/ops-dashboard/` and `apps/fan-app/`.
   - Upgraded `apps/shared/` (`contracts.ts`, `ws.ts`, `apiClient.ts`, `stadiumData.ts`, `simulator.ts`, `congestion.ts`, `useFanStream.ts`, `useOpsStream.ts`) to `chinnaswamy_bengaluru`.
-  - Overhauled 3D M. Chinnaswamy Stadium model (`HologramSceneContent.tsx`, `StadiumHologram3D.tsx`): replaced raw neon cylinders with realistic outfield/pitch/stand architecture, architectural Gate Portals (`GatePortalMarker`), clean Facility Pods (`FacilityPodMarker`), `Gates Only` / `Full Stadium` / `Food / WC / Aid` / `Route Focus` layer tabs, 1-click `Best Exit (Low Crowd)` button, any-node origin picker, seat ticket 3D marker, and smooth walk simulator (`typecheck`, `lint`, and `build` passing across all 3 apps).
-  - Integrated into `apps/fan-app` and `apps/ops-dashboard` (`typecheck`, `lint`, `build` passing on both).
+  - Completely redesigned the UI color system across all 3 apps around Obsidian (`#09090b` / `zinc-950`): Bengaluru matchday Crimson & Gold (`apps/fan-app`), Tactical Teal & Cyan (`apps/ops-dashboard`), and Violet & Amber (`apps/sim-studio`).
+  - Rebuilt the 3D M. Chinnaswamy Stadium model (`HologramSceneContent.tsx`, `StadiumHologram3D.tsx`) with stepped multi-tier seating risers (`SteppedStandSector`), radial aisle dividers, outer concrete colonnade pillars, the iconic Eastern Wing blue photovoltaic solar canopy (`SolarCanopyRoof`), SubAir mowed outfield + LED crimson boundary ring + 22-yard pitch + stumps + sightscreens, 4 floodlight towers, Cubbon Park perimeter trees, architectural Gate Portals, `Gates Only` / `Best Exit (Low Crowd)` / `Set My Location` controls, and smooth walk simulator (`typecheck`, `lint`, and `build` passing across all 3 apps; 7/7 backend tests passing).
 
 - **Unified Single-Command Launcher & 3-App Suite**:
   - Added 3rd Next.js app `apps/sim-studio/` (`:3002`) for behind-the-scenes congestion & incident simulation at any M. Chinnaswamy Stadium location, backed by `/api/v1/simulation/status`, `/api/v1/simulation/reset`, and `/api/v1/simulation/preset` (+ CORS for `:3002`).
