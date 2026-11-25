@@ -53,14 +53,14 @@ def _edge_travel_cost_min(
     congestion = telem.congestion_score if telem else 0.0
     wait_min = telem.estimated_wait_min if telem else 0.0
 
-    # Priority 1: Gate traffic dominates routing cost (queue wait + heavy congestion multiplier)
+    # Priority 1: Gate traffic dominates routing cost so less-crowded gates win even if further
     if dest_node.type == "gate":
-        penalty = 1.0 + (congestion ** 2) * 6.0
-        gate_delay_min = wait_min * 0.75 + (congestion * 4.0 if congestion >= 0.5 else 0.0)
+        penalty = 1.0 + (congestion ** 2) * 12.0
+        gate_delay_min = (congestion ** 1.5) * 25.0 + wait_min * 2.0
     # Priority 2: Stand & concourse congestion shapes the interior path
     elif dest_node.type in ("seating_section", "concourse"):
-        penalty = 1.0 + (congestion ** 2) * 3.0
-        gate_delay_min = wait_min * 0.25
+        penalty = 1.0 + (congestion ** 2) * 4.0
+        gate_delay_min = (congestion ** 1.5) * 6.0 + wait_min * 0.5
     else:
         penalty = 1.0 + (congestion ** 2) * 2.0
         gate_delay_min = 0.0
@@ -84,7 +84,7 @@ def _is_gate_surged(
     telem = telemetry_map.get(node.id)
     if not telem:
         return False
-    return telem.congestion_score >= 0.80 or telem.status == "critical"
+    return telem.congestion_score >= 0.60 or telem.status in ("high", "critical")
 
 
 def _shortest_path(
@@ -300,8 +300,10 @@ def recommend_route(
         path, _, walk_min = res
         telem = telemetry_map.get(cand.id)
         wait_min = telem.estimated_wait_min if telem else 0.0
-        incident_bias = 8.0 if cand.id in incident_nodes else 0.0
-        total_min = round(walk_min + wait_min + incident_bias, 2)
+        cong = telem.congestion_score if telem else 0.0
+        incident_bias = 15.0 if cand.id in incident_nodes else 0.0
+        gate_cong_bias = (cong ** 1.5) * 25.0 if cand.type == "gate" else 0.0
+        total_min = round(walk_min + wait_min + incident_bias + gate_cong_bias, 2)
         evaluated.append((total_min, walk_min, wait_min, cand, path))
 
     if not evaluated:

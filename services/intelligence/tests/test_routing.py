@@ -97,3 +97,19 @@ def test_routing_to_stand_bypasses_surged_gate() -> None:
     )
     assert "gate_1_cubbon" not in res.route_node_ids
     assert any(nid.startswith("gate_") for nid in res.route_node_ids)
+
+
+def test_routing_prefers_further_clear_gate_over_closer_crowded_gate() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="in_play")
+    sim.inject_bottleneck("gate_1_cubbon", severity=0.78)
+    sim.inject_bottleneck("gate_18_queens", severity=0.68)
+    sim.inject_bottleneck("gate_4_cubbon", severity=0.20)
+    snap = sim.step()
+    engine = WayfindingEngine(sim.topology)
+
+    res = engine.recommend(
+        origin_node_id="transit_cubbon_park_metro",
+        snapshot=snap,
+        target_type="gate",
+    )
+    assert res.recommended_target_id not in ("gate_1_cubbon", "gate_18_queens")

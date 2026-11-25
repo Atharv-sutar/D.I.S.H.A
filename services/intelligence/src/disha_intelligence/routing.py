@@ -53,7 +53,7 @@ class WayfindingEngine:
                 and node.type == "gate"
                 and node.id not in allowed
                 and tel is not None
-                and (tel.congestion_score >= 0.80 or tel.status == "critical")
+                and (tel.congestion_score >= 0.60 or tel.status in ("high", "critical"))
             ):
                 continue
             graph.add_node(node.id, node=node)
@@ -104,11 +104,11 @@ class WayfindingEngine:
 
         # Priority 1: Gate traffic dominates edge cost; Priority 2: Stand & concourse congestion
         if dest_type == "gate":
-            multiplier = 1.0 + 6.0 * (v_cong**2)
-            delay_min = v_wait * 0.75 + (v_cong * 4.0 if v_cong >= 0.5 else 0.0)
+            multiplier = 1.0 + 12.0 * (v_cong**2)
+            delay_min = (v_cong**1.5) * 25.0 + v_wait * 2.0
         elif dest_type in ("seating_section", "concourse"):
             multiplier = 1.0 + 3.0 * (v_cong**2)
-            delay_min = v_wait * 0.25
+            delay_min = (v_cong**1.5) * 2.0 + v_wait * 0.25
         else:
             multiplier = 1.0 + 2.0 * (v_cong**2)
             delay_min = 0.0
@@ -201,8 +201,32 @@ class WayfindingEngine:
             )
             tel = telemetry_map.get(cand.id)
             wait_min = tel.estimated_wait_min if tel else 0.0
-            total_min = walk_min + wait_min
+            cong = tel.congestion_score if tel else 0.0
+            gate_bias = (cong**1.5) * 25.0 if cand.type == "gate" else 0.0
+            total_min = walk_min + wait_min + gate_bias
             evaluated.append((total_min, walk_min, wait_min, path, cand))
+
+        if not evaluated and resolved_type == "gate":
+            # Fallback if all reachable paths pass through a crowded gate
+            graph = self._build_graph(
+                telemetry_map, accessible_only, speed_mps, avoid_surged_gates=False
+            )
+            candidates = [
+                n for n in self.topology.nodes if n.id in graph and n.type == "gate"
+            ]
+            for cand in candidates:
+                try:
+                    path = nx.shortest_path(graph, origin_node_id, cand.id, weight="weight")
+                except nx.NetworkXNoPath:
+                    continue
+                walk_min = sum(
+                    float(graph[path[i]][path[i + 1]]["weight"]) for i in range(len(path) - 1)
+                )
+                tel = telemetry_map.get(cand.id)
+                wait_min = tel.estimated_wait_min if tel else 0.0
+                cong = tel.congestion_score if tel else 0.0
+                gate_bias = (cong**1.5) * 25.0
+                evaluated.append((walk_min + wait_min + gate_bias, walk_min, wait_min, path, cand))
 
         if not evaluated:
             raise ValueError(
