@@ -53,15 +53,24 @@ class WayfindingEngine:
             if edge.from_node not in graph or edge.to_node not in graph:
                 continue
 
+            dest_node = self._node_map[edge.to_node]
             self._add_weighted_edge(
-                graph, edge.from_node, edge.to_node, edge.distance_m, telemetry_map, walking_speed_mps
+                graph,
+                edge.from_node,
+                edge.to_node,
+                edge.distance_m,
+                dest_node.type,
+                telemetry_map,
+                walking_speed_mps,
             )
             if edge.bidirectional:
+                rev_dest = self._node_map[edge.from_node]
                 self._add_weighted_edge(
                     graph,
                     edge.to_node,
                     edge.from_node,
                     edge.distance_m,
+                    rev_dest.type,
                     telemetry_map,
                     walking_speed_mps,
                 )
@@ -73,13 +82,27 @@ class WayfindingEngine:
         u: str,
         v: str,
         distance_m: float,
+        dest_type: NodeType,
         telemetry_map: dict[str, NodeTelemetry],
         walking_speed_mps: float,
     ) -> None:
         v_tel = telemetry_map.get(v)
         v_cong = v_tel.congestion_score if v_tel else 0.0
+        v_wait = v_tel.estimated_wait_min if v_tel else 0.0
         base_walk_min = (distance_m / walking_speed_mps) / 60.0
-        effective_walk_min = base_walk_min * (1.0 + 1.2 * (v_cong**2))
+
+        # Priority 1: Gate traffic dominates edge cost; Priority 2: Stand & concourse congestion
+        if dest_type == "gate":
+            multiplier = 1.0 + 6.0 * (v_cong**2)
+            delay_min = v_wait * 0.75 + (v_cong * 4.0 if v_cong >= 0.5 else 0.0)
+        elif dest_type in ("seating_section", "concourse"):
+            multiplier = 1.0 + 3.0 * (v_cong**2)
+            delay_min = v_wait * 0.25
+        else:
+            multiplier = 1.0 + 2.0 * (v_cong**2)
+            delay_min = 0.0
+
+        effective_walk_min = (base_walk_min * multiplier) + delay_min
         graph.add_edge(u, v, weight=effective_walk_min, distance_m=distance_m)
 
     def recommend(

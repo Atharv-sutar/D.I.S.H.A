@@ -51,12 +51,25 @@ def _edge_travel_cost_min(
 
     telem = telemetry_map.get(dest_node.id)
     congestion = telem.congestion_score if telem else 0.0
-    penalty = 1.0 + (congestion * 2.5)
+    wait_min = telem.estimated_wait_min if telem else 0.0
+
+    # Priority 1: Gate traffic dominates routing cost (queue wait + heavy congestion multiplier)
+    if dest_node.type == "gate":
+        penalty = 1.0 + (congestion ** 2) * 6.0
+        gate_delay_min = wait_min * 0.75 + (congestion * 4.0 if congestion >= 0.5 else 0.0)
+    # Priority 2: Stand & concourse congestion shapes the interior path
+    elif dest_node.type in ("seating_section", "concourse"):
+        penalty = 1.0 + (congestion ** 2) * 3.0
+        gate_delay_min = wait_min * 0.25
+    else:
+        penalty = 1.0 + (congestion ** 2) * 2.0
+        gate_delay_min = 0.0
+
     if dest_node.id in incident_nodes:
         penalty += 4.0
     if dest_node.status == "restricted":
         penalty += 6.0
-    return base_walk_min * penalty
+    return (base_walk_min * penalty) + gate_delay_min
 
 
 def _shortest_path(
