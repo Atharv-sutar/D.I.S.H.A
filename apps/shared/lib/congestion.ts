@@ -4,6 +4,7 @@ import type {
   EventPhase,
   IncidentSeverity,
   IncidentStatus,
+  NodeTelemetry,
 } from "../types/contracts";
 
 export interface CongestionVisuals {
@@ -118,14 +119,64 @@ export function formatRelativeSeconds(isoTimestamp: string | null): string {
   return `${mins}m ago`;
 }
 
+export const SVG_SCALE = 2.65;
+
 export function toSvgPoint(x: number, y: number): { sx: number; sy: number } {
   if (Math.abs(x) <= 220 && Math.abs(y) <= 220) {
     return {
-      sx: Number((500 + x * 2.65).toFixed(1)),
-      sy: Number((500 - y * 2.65).toFixed(1)),
+      sx: Number((500 + x * SVG_SCALE).toFixed(1)),
+      sy: Number((500 - y * SVG_SCALE).toFixed(1)),
     };
   }
   return { sx: x, sy: y };
+}
+
+export function fromSvgPoint(sx: number, sy: number): { x: number; y: number } {
+  return {
+    x: Number(((sx - 500) / SVG_SCALE).toFixed(1)),
+    y: Number(((500 - sy) / SVG_SCALE).toFixed(1)),
+  };
+}
+
+export interface CrowdAnomalyInfo {
+  isUnusual: boolean;
+  reason: string;
+  level: "critical" | "elevated" | "normal";
+}
+
+export function evaluateCrowdAnomaly(
+  telemetry: NodeTelemetry | undefined,
+  activeIncidentCount: number
+): CrowdAnomalyInfo {
+  if (!telemetry) {
+    return { isUnusual: false, reason: "Nominal", level: "normal" };
+  }
+  const score = telemetry.congestion_score;
+  const pulse = telemetry.pulse_intensity ?? score;
+  if (score >= 0.8 || activeIncidentCount > 0 || pulse >= 0.85) {
+    return {
+      isUnusual: true,
+      reason:
+        activeIncidentCount > 0
+          ? "Active Crowd Incident"
+          : `Critical Crowd Gathering (${Math.round(score * 100)}%)`,
+      level: "critical",
+    };
+  }
+  if (
+    score >= 0.68 ||
+    (telemetry.trend === "rising" && score >= 0.56)
+  ) {
+    return {
+      isUnusual: true,
+      reason:
+        telemetry.trend === "rising"
+          ? `Rapidly Gathering (${Math.round(score * 100)}% ↑)`
+          : `Unusual Density (${Math.round(score * 100)}%)`,
+      level: "elevated",
+    };
+  }
+  return { isUnusual: false, reason: "Normal flow", level: "normal" };
 }
 
 export function sortIncidentsByPriority(

@@ -2,7 +2,7 @@
 
 - **Owner**: Ankit Navi (`Ankit-Navi-8294`)
 - **Module**: `apps/` (`apps/ops-dashboard/`, `apps/fan-app/`, `apps/shared/`)
-- **Last Updated**: 2026-11-25T12:38+05:30
+- **Last Updated**: 2026-11-25T17:45+05:30
 - **Branch**: `main`
 
 ## Current State
@@ -15,6 +15,11 @@
 - **Fan Experience & Smart Navigation App (`apps/fan-app/`, Port `3001`)**:
   - Mobile-first Next.js App Router + React + TypeScript + Tailwind CSS wayfinding app (`FanHeader`, `AdvisoryBanner`, `WayfindingControls`, `WayfindingMap`, `RouteGuidanceSheet`).
   - Current gate/location selector, one-tap least-crowded gate/concession/restroom/section queries, Accessible Route Only toggle, highlighted SVG `route_node_ids` path, `time_saved_min` badge, turn-by-turn `steps`, ranked `alternatives`, and live `/ws/fan` advisories banner.
+- **2D Simulation + Newer Chinnaswamy Map (Latest)**:
+  - Added `apps/shared/components/StadiumMap2DBase.tsx` — blueprint-accurate SVG base with real stand sectors, canopy/tier rings, cricket pitch, ends, floodlight towers, and perimeter roads, driven by `contracts/venues/chinnaswamy_stadium.json` `hologram_spec`.
+  - **Fan app (`WayfindingMap`)**: rebuilt as a 2D live navigation map with level tabs (`Plaza/L0`, `L1`, `L2`), animated optimal-route path, destination beacon, multi-level transition cues, congestion-coloured zones, click-to-reroute stand sectors/nodes, and a live user avatar/heading cone that follows the walk simulator between levels.
+  - **Ops app (`StadiumHeatmap`)**: rebuilt as a 2D live crowd radar with simulated fan particles whose density reflects live telemetry, pulsing halos for unusual gatherings, per-level anomaly badges, a ranked "Unusual Crowd Detection" panel with focus actions, a global gathering banner, active-fan tracking, crowd-particle toggle, and "Pause Sim / Resume Sim", "Simulate Surge", "Clear Crowd" controls wired to `useOpsStream`.
+  - Added `evaluateCrowdAnomaly`, `SVG_SCALE`, and `fromSvgPoint` to `apps/shared/lib/congestion.ts`; extended `useOpsStream` with `simPaused`, `simulateCrowdSurge`, and `clearCrowdSurge`.
 - **Verification**: `npm run typecheck`, `npm run lint`, and `npm run build` passed in both `apps/ops-dashboard/` and `apps/fan-app/`; `python .agents/scripts/check_boundaries.py` passed.
 
 ## Active Interfaces Consumed

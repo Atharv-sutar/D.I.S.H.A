@@ -32,10 +32,14 @@ export default function OpsDashboardPage() {
     activeFans,
     mode,
     setMode,
+    simPaused,
+    setSimPaused,
     connectionStatus,
     lastUpdatedAt,
     isStale,
     updateIncidentStatus,
+    simulateCrowdSurge,
+    clearCrowdSurge,
     refreshNow,
   } = useOpsStream();
 
@@ -111,8 +115,13 @@ export default function OpsDashboardPage() {
               topology={topology}
               telemetry={telemetry}
               incidents={incidents}
+              activeFans={activeFans}
               selectedNodeId={selectedNodeId}
               onSelectNode={setSelectedNodeId}
+              onSimulateSurge={simulateCrowdSurge}
+              onClearSurge={clearCrowdSurge}
+              simPaused={simPaused}
+              onToggleSimulation={() => setSimPaused(!simPaused)}
             />
           )}
 

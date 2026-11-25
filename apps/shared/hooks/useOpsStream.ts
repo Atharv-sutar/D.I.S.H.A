@@ -14,6 +14,8 @@ import type {
   OpsWsEnvelope,
 } from "../types/ws";
 import {
+  controlBottleneck,
+  createIncident,
   fetchActiveFans,
   fetchIncidents,
   fetchLatestTelemetry,
@@ -21,6 +23,7 @@ import {
   getWsOpsUrl,
   patchIncident,
 } from "../lib/apiClient";
+import { scoreToCongestionLevel } from "../lib/congestion";
 import {
   createInitialIncidents,
   createInitialTelemetry,
@@ -38,6 +41,8 @@ export interface UseOpsStreamResult {
   activeFans: UserPosition3D[];
   mode: DataSourceMode;
   setMode: (mode: DataSourceMode) => void;
+  simPaused: boolean;
+  setSimPaused: (paused: boolean) => void;
   connectionStatus: ConnectionStatus;
   lastUpdatedAt: string | null;
   isStale: boolean;
@@ -46,6 +51,8 @@ export interface UseOpsStreamResult {
     status: IncidentStatus,
     assignedTeam?: string
   ) => Promise<void>;
+  simulateCrowdSurge: (nodeId: string, severity?: number) => Promise<void>;
+  clearCrowdSurge: (nodeId: string) => Promise<void>;
   refreshNow: () => Promise<void>;
 }
 
@@ -76,6 +83,7 @@ export function useOpsStream(): UseOpsStreamResult {
     },
   ]);
   const [mode, setMode] = useState<DataSourceMode>("auto");
+  const [simPaused, setSimPaused] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(() =>
@@ -180,7 +188,7 @@ export function useOpsStream(): UseOpsStreamResult {
 
   // Simulation tick loop when in simulation mode
   useEffect(() => {
-    if (connectionStatus !== "simulation") return;
+    if (connectionStatus !== "simulation" || simPaused) return;
     const timer = setInterval(() => {
       setTelemetry((prev) => {
         const next = tickTelemetrySnapshot(prev, topologyRef.current);
@@ -197,10 +205,10 @@ export function useOpsStream(): UseOpsStreamResult {
         }
         return next;
       });
-    }, 3500);
+    }, 3000);
 
     return () => clearInterval(timer);
-  }, [connectionStatus]);
+  }, [connectionStatus, simPaused]);
 
   // Stale telemetry detector (> 12s without fresh update)
   useEffect(() => {
@@ -222,7 +230,6 @@ export function useOpsStream(): UseOpsStreamResult {
       assignedTeam?: string
     ) => {
       const updatedAt = new Date().toISOString();
-      // Optimistic UI update
       setIncidents((prev) =>
         prev.map((inc) =>
           inc.incident_id === incidentId
@@ -255,6 +262,115 @@ export function useOpsStream(): UseOpsStreamResult {
     [connectionStatus]
   );
 
+  const simulateCrowdSurge = useCallback(
+    async (nodeId: string, severity = 0.91) => {
+      const nodeMeta = topologyRef.current.nodes.find((n) => n.id === nodeId);
+      const label = nodeMeta?.name ?? nodeId;
+      const now = new Date().toISOString();
+
+      setTelemetry((prev) => ({
+        ...prev,
+        timestamp: now,
+        nodes: prev.nodes.map((n) =>
+          n.node_id === nodeId
+            ? {
+                ...n,
+                congestion_score: severity,
+                occupancy: Math.round(n.capacity * Math.min(0.98, severity)),
+                queue_length: Math.max(n.queue_length, Math.round(severity * 175)),
+                estimated_wait_min: Number((severity * 16.5).toFixed(1)),
+                flow_rate_per_min: Math.max(8, Math.round(n.flow_rate_per_min * 0.45)),
+                trend: "rising",
+                pulse_intensity: 1,
+                status: scoreToCongestionLevel(severity),
+              }
+            : n
+        ),
+      }));
+      setLastUpdatedAt(now);
+
+      const newIncident: AlertIncident = {
+        incident_id: `inc_sim_${Date.now().toString().slice(-5)}`,
+        venue_id: topologyRef.current.venue_id,
+        created_at: now,
+        category: "crowd_bottleneck",
+        severity: severity >= 0.85 ? "critical" : "high",
+        status: "open",
+        node_id: nodeId,
+        position: {
+          x: nodeMeta?.x ?? 0,
+          y: nodeMeta?.y ?? 0,
+          z: nodeMeta?.z ?? 0,
+          level: nodeMeta?.level ?? 0,
+        },
+        title: `Unusual Crowd Gathering at ${label}`,
+        description: `Sudden crowd cluster (${Math.round(severity * 100)}% density) detected in 2D radar simulation.`,
+        recommended_action: `Deploy crowd marshals to ${label} and divert fan traffic to adjacent low-wait nodes.`,
+        confidence: 0.94,
+      };
+
+      setIncidents((prev) => [newIncident, ...prev]);
+
+      if (connectionStatus === "live") {
+        try {
+          await controlBottleneck({ node_id: nodeId, severity, clear: false });
+          await createIncident({
+            category: "crowd_bottleneck",
+            severity: severity >= 0.85 ? "critical" : "high",
+            node_id: nodeId,
+            title: newIncident.title,
+            description: newIncident.description,
+            recommended_action: newIncident.recommended_action,
+          });
+        } catch {
+          // Local simulation state remains active
+        }
+      }
+    },
+    [connectionStatus]
+  );
+
+  const clearCrowdSurge = useCallback(
+    async (nodeId: string) => {
+      const now = new Date().toISOString();
+      setTelemetry((prev) => ({
+        ...prev,
+        timestamp: now,
+        nodes: prev.nodes.map((n) =>
+          n.node_id === nodeId
+            ? {
+                ...n,
+                congestion_score: 0.24,
+                occupancy: Math.round(n.capacity * 0.28),
+                queue_length: 12,
+                estimated_wait_min: 1.6,
+                trend: "falling",
+                pulse_intensity: 0.24,
+                status: "optimal",
+              }
+            : n
+        ),
+      }));
+      setIncidents((prev) =>
+        prev.map((inc) =>
+          inc.node_id === nodeId && inc.status !== "resolved"
+            ? { ...inc, status: "resolved", updated_at: now }
+            : inc
+        )
+      );
+      setLastUpdatedAt(now);
+
+      if (connectionStatus === "live") {
+        try {
+          await controlBottleneck({ node_id: nodeId, clear: true });
+        } catch {
+          // Local clear remains active
+        }
+      }
+    },
+    [connectionStatus]
+  );
+
   return {
     topology,
     telemetry,
@@ -262,10 +378,14 @@ export function useOpsStream(): UseOpsStreamResult {
     activeFans,
     mode,
     setMode,
+    simPaused,
+    setSimPaused,
     connectionStatus,
     lastUpdatedAt,
     isStale,
     updateIncidentStatus,
+    simulateCrowdSurge,
+    clearCrowdSurge,
     refreshNow: connectLive,
   };
 }

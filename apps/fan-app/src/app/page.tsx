@@ -291,6 +291,8 @@ export default function FanAppPage() {
               topology={topology}
               telemetry={telemetry}
               guidance={guidance}
+              userPosition={userPosition}
+              onSelectNode={handleQuickRouteNode}
             />
           )}
 
