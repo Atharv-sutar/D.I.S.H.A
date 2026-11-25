@@ -6,25 +6,19 @@
 - **Branch**: `main`
 
 ## Current State
-- Set up Python `.venv` in `services/intelligence/` with `pip install -e ".[dev]"` (`pydantic`, `numpy`, `networkx`, `httpx`, `pytest`, `ruff`).
-- Implemented core intelligence & simulation engine in `services/intelligence/src/disha_intelligence/`:
-  - `models.py`: Pydantic v2 models strictly aligned with `contracts/schemas/` (`StadiumTopology`, `TelemetrySnapshot`, `FanGuidanceResponse`, `AlertIncident`).
-  - `topology.py`: Deterministic 2-level stadium graph (`disha_arena_01`, `levels: [1, 2]`, 28 nodes across gates/concourses/concessions/restrooms/medical/seating/transit, 36 edges including accessible ramps vs. stairs-only transitions).
-  - `simulator.py`: Deterministic seeded `CrowdSimulator` (`pre_event_ingress`, `in_play`, `halftime_surge`, `egress`, `idle`) with configurable bottleneck injection and expiry.
-  - `routing.py`: `networkx`-based `WayfindingEngine` minimizing combined walk + queue wait time, with `accessible_only` filtering, turn-by-turn `steps`, `time_saved_min`, and `alternatives`.
-  - `detector.py`: `IncidentDetector` flagging `queue_surge`, `crowd_bottleneck`, and stalled throughput anomalies with severity, confidence, recommended actions, and per-node cooldown.
-  - `publisher.py`: Async `SimulationPublisher` runner (`python -m disha_intelligence.publisher --scenario halftime_rush --ticks 3 --dry-run`) posting `TelemetrySnapshot` to `BACKEND_INGEST_URL` and `AlertIncident` to `BACKEND_INCIDENTS_URL`.
-  - `forecaster.py`: Sliding-window `CongestionForecaster` predicting `+5m` and `+10m` congestion scores, wait times, and critical-threshold breaches; integrated with `IncidentDetector` for predictive `medium`-severity early-warning alerts.
-  - `scenarios.py`: Reproducible matchday scenario presets (`matchday_ingress`, `halftime_rush`, `in_play_steady`, `post_match_egress`).
-  - `server.py`: Standalone HTTP microservice (`python -m disha_intelligence.server` on `INTELLIGENCE_HOST:INTELLIGENCE_PORT`, default `8001`) exposing `/health`, `/topology`, `/telemetry/latest`, `/forecast`, `/routing/recommend`, and `/simulation/*` control endpoints.
-- Verified with `pytest` (16/16 passing, including contract JSON schema conformance and live HTTP server tests) and `ruff check`.
+- Migrated `services/intelligence/` to the canonical 3D **M. Chinnaswamy Stadium (Bengaluru)** foundation (`contracts/venues/chinnaswamy_stadium.json`, `venue_id: chinnaswamy_bengaluru`, 26 nodes across levels 0, 1, 2, metric `(x, y, z)` coordinates, and `hologram_spec`):
+  - `models.py`: Updated Pydantic v2 models with `HologramSpec`, `z`, `stand_code`, `road_perimeter`, `pulse_intensity`, `active_incident_ids`, `Position3D`, `UserPosition3D`, `TargetBeacon`, and `Waypoint3D`.
+  - `topology.py`: `build_default_topology()` now loads `contracts/venues/chinnaswamy_stadium.json`.
+  - `simulator.py` & `scenarios.py`: Emit `pulse_intensity` on `NodeTelemetry` and use Chinnaswamy node IDs (`gate_1_cubbon`, `concession_north_express`, `restroom_east`, `transit_cubbon_park_metro`).
+  - `routing.py`: Populates `user_position`, `target_beacon`, and `waypoints_3d` (`origin`, `checkpoint`, `level_transition`, `destination`) on `FanGuidanceResponse`.
+  - `detector.py` & `forecaster.py`: Populates 3D `position` (`x, y, z, level`) on `AlertIncident` for floating hologram beacons, including predictive `+5m`/`+10m` surge alerts.
+  - `publisher.py` & `server.py`: Async HTTP publisher (`POST /api/v1/telemetry/ingest`, `POST /api/v1/incidents`) and standalone HTTP server on port `8001`.
+- Verified with `pytest` (16/16 passing, including contract JSON schema conformance) and `ruff check`.
 
 ## Active Interfaces Provided
-- Importable Python package `disha_intelligence` (`build_default_topology`, `CrowdSimulator`, `WayfindingEngine`, `IncidentDetector`, `SimulationPublisher`).
-- HTTP publisher targeting:
-  - `POST /api/v1/telemetry/ingest` (`TelemetrySnapshot`)
-  - `POST /api/v1/incidents` (`AlertIncident`)
+- Importable Python package `disha_intelligence` (`build_default_topology`, `CrowdSimulator`, `WayfindingEngine`, `IncidentDetector`, `CongestionForecaster`, `SimulationPublisher`, `IntelligenceRuntime`).
+- HTTP publisher targeting `POST /api/v1/telemetry/ingest` and `POST /api/v1/incidents`.
 
 ## Dependencies / Requests for Peers
-- `@Atharv-sutar`: Ready to stream live `TelemetrySnapshot` and `AlertIncident` payloads to `POST /api/v1/telemetry/ingest` and `POST /api/v1/incidents`, and `WayfindingEngine.recommend(...)` can back `GET /api/v1/routing/recommend` once backend endpoints are wired.
-- `@Ankit-Navi-8294`: All `StadiumTopology` nodes include normalized `x`, `y` (`0–1000`) and `level` (`1`, `2`) coordinates for SVG/canvas heatmaps and wayfinding overlays.
+- `@Atharv-sutar`: Chinnaswamy 3D payloads (`pulse_intensity`, `AlertIncident.position`, `waypoints_3d`, `target_beacon`, `user_position`) are aligned with `contracts/schemas/*.schema.json` and ready to stream into `services/backend/` on port `8000`.
+- `@Ankit-Navi-8294`: Ready for 3D hologram rendering with Chinnaswamy metric `(x, y, z)` coordinates, `pulse_intensity`, `AlertIncident.position`, and `waypoints_3d`.

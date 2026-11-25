@@ -4,7 +4,7 @@
 
 ## Responsibilities
 
-- **Stadium Topology Seed** (`topology.py`): Multi-level graph (`disha_arena_01`, Levels 1–2) with normalized `0–1000` coordinates, capacities, and accessible vs. stairs-only transitions (`StadiumTopology`).
+- **Stadium Topology Seed** (`topology.py`): Loads canonical 3D **M. Chinnaswamy Stadium** (`contracts/venues/chinnaswamy_stadium.json`, `chinnaswamy_bengaluru`, Levels 0–2) with metric `(x, y, z)` coordinates, `hologram_spec`, and accessible vs. stairs-only transitions (`StadiumTopology`).
 - **Crowd & Queue Simulator** (`simulator.py`, `scenarios.py`): Deterministic seeded simulation (`pre_event_ingress`, `in_play`, `halftime_surge`, `egress`, `idle`) with configurable bottleneck injection (`TelemetrySnapshot`).
 - **Congestion Forecaster** (`forecaster.py`): Sliding-window `+5m` and `+10m` congestion & wait-time projections (`CongestionForecaster`).
 - **Smart Wayfinding Engine** (`routing.py`): NetworkX shortest combined walk + wait-time routing with `accessible_only` filtering, step-by-step instructions, `time_saved_min`, and `alternatives` (`FanGuidanceResponse`).

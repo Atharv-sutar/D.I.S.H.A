@@ -1,4 +1,4 @@
-"""Tests for StadiumTopology seed graph."""
+"""Tests for M. Chinnaswamy Stadium 3D topology seed graph."""
 
 import re
 
@@ -7,18 +7,18 @@ from disha_intelligence.topology import build_default_topology
 
 def test_default_topology_schema_integrity() -> None:
     topology = build_default_topology()
-    assert topology.venue_id == "disha_arena_01"
-    assert topology.levels == [1, 2]
-    assert len(topology.nodes) >= 20
-    assert len(topology.edges) >= 25
+    assert topology.venue_id == "chinnaswamy_bengaluru"
+    assert topology.levels == [0, 1, 2]
+    assert topology.hologram_spec is not None
+    assert topology.hologram_spec.field_radius_m == 68
+    assert len(topology.nodes) == 26
+    assert len(topology.edges) >= 35
 
     node_ids = {n.id for n in topology.nodes}
     assert len(node_ids) == len(topology.nodes)
 
     for node in topology.nodes:
         assert re.match(r"^[a-z0-9_]+$", node.id)
-        assert 0.0 <= node.x <= 1000.0
-        assert 0.0 <= node.y <= 1000.0
         assert node.level in topology.levels
         assert node.capacity >= 1
 

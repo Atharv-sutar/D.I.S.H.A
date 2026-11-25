@@ -50,10 +50,12 @@ def test_all_outputs_conform_to_json_schema_required_fields_and_enums() -> None:
     assert inc_data["category"] in inc_schema["properties"]["category"]["enum"]
     assert inc_data["severity"] in inc_schema["properties"]["severity"]["enum"]
     assert inc_data["status"] in inc_schema["properties"]["status"]["enum"]
+    assert "position" in inc_data
 
     engine = WayfindingEngine(topology)
-    guidance = engine.recommend("transit_north_metro", snapshot, target_type="gate")
+    guidance = engine.recommend("transit_cubbon_park_metro", snapshot, target_type="gate")
     guid_schema = _load_schema("fan_guidance.schema.json")
     guid_data = guidance.model_dump(mode="json")
     for req in guid_schema["required"]:
         assert req in guid_data
+    assert len(guid_data["waypoints_3d"]) == len(guid_data["route_node_ids"])

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import UTC
 
 import networkx as nx
@@ -13,8 +14,12 @@ from disha_intelligence.models import (
     RouteStep,
     StadiumTopology,
     TargetAlternative,
+    TargetBeacon,
     TelemetrySnapshot,
     TopologyNode,
+    UserPosition3D,
+    Waypoint3D,
+    WaypointType,
 )
 from disha_intelligence.topology import build_default_topology
 
@@ -154,7 +159,34 @@ class WayfindingEngine:
         )[0]
         time_saved = round(max(0.0, baseline_total - best_total), 2)
 
-        steps = self._build_steps(best_path, graph)
+        steps, waypoints_3d = self._build_steps_and_waypoints(best_path, graph)
+        origin_node = self._node_map[origin_node_id]
+        heading_deg = 0.0
+        if len(best_path) > 1:
+            next_node = self._node_map[best_path[1]]
+            heading_deg = round(
+                math.degrees(math.atan2(next_node.x - origin_node.x, next_node.y - origin_node.y))
+                % 360.0,
+                1,
+            )
+
+        user_position = UserPosition3D(
+            x=origin_node.x,
+            y=origin_node.y,
+            z=origin_node.z,
+            level=origin_node.level,
+            heading_deg=heading_deg,
+            snapped_node_id=origin_node_id,
+        )
+        target_beacon = TargetBeacon(
+            node_id=best_node.id,
+            label=best_node.name,
+            x=best_node.x,
+            y=best_node.y,
+            z=best_node.z,
+            level=best_node.level,
+        )
+
         alternatives = [
             TargetAlternative(
                 node_id=node.id,
@@ -175,6 +207,8 @@ class WayfindingEngine:
             origin_node_id=origin_node_id,
             destination_node_id=destination_id,
             recommended_target_id=best_node.id,
+            user_position=user_position,
+            target_beacon=target_beacon,
             estimated_total_min=round(best_total, 2),
             estimated_wait_min=round(best_wait, 2),
             estimated_walk_min=round(best_walk, 2),
@@ -182,38 +216,57 @@ class WayfindingEngine:
             accessible_only=accessible_only,
             route_node_ids=best_path,
             steps=steps,
+            waypoints_3d=waypoints_3d,
             alternatives=alternatives,
         )
 
-    def _build_steps(self, path: list[str], graph: nx.DiGraph) -> list[RouteStep]:
+    def _build_steps_and_waypoints(
+        self, path: list[str], graph: nx.DiGraph
+    ) -> tuple[list[RouteStep], list[Waypoint3D]]:
         steps: list[RouteStep] = []
+        waypoints: list[Waypoint3D] = []
         for idx, node_id in enumerate(path):
             node = self._node_map[node_id]
             if idx == 0:
-                steps.append(
-                    RouteStep(
-                        order=1,
-                        node_id=node_id,
-                        instruction=f"Start at {node.name} (Level {node.level}).",
-                        distance_m=0.0,
-                    )
-                )
+                instruction = f"Start at {node.name} (Level {node.level})."
+                dist_m = 0.0
+                wp_type: WaypointType = "origin"
             else:
                 prev_id = path[idx - 1]
                 prev_node = self._node_map[prev_id]
-                dist_m = float(graph[prev_id][node_id]["distance_m"])
+                dist_m = round(float(graph[prev_id][node_id]["distance_m"]), 1)
                 if node.level != prev_node.level:
                     verb = f"Take level transition to Level {node.level} at {node.name}"
+                    wp_type = "level_transition"
                 elif idx == len(path) - 1:
                     verb = f"Arrive at {node.name}"
+                    wp_type = "destination"
                 else:
                     verb = f"Continue via {node.name}"
-                steps.append(
-                    RouteStep(
-                        order=idx + 1,
-                        node_id=node_id,
-                        instruction=f"{verb} ({dist_m:.0f} m).",
-                        distance_m=round(dist_m, 1),
-                    )
+                    wp_type = "checkpoint"
+                if idx == len(path) - 1 and node.level != prev_node.level:
+                    wp_type = "destination"
+                instruction = f"{verb} ({dist_m:.0f} m)."
+
+            steps.append(
+                RouteStep(
+                    order=idx + 1,
+                    node_id=node_id,
+                    instruction=instruction,
+                    distance_m=dist_m,
                 )
-        return steps
+            )
+            waypoints.append(
+                Waypoint3D(
+                    order=idx + 1,
+                    node_id=node_id,
+                    x=node.x,
+                    y=node.y,
+                    z=node.z,
+                    level=node.level,
+                    waypoint_type=wp_type,
+                    instruction=instruction,
+                    distance_m=dist_m,
+                )
+            )
+        return steps, waypoints

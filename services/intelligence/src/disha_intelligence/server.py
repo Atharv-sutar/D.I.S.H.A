@@ -44,6 +44,13 @@ class IntelligenceRuntime:
             self.forecaster.record(snapshot)
             forecasts = self.forecaster.forecast_all()
             incidents = self.detector.analyze(snapshot, forecasts=forecasts)
+            inc_by_node: dict[str, list[str]] = {}
+            for inc in incidents:
+                inc_by_node.setdefault(inc.node_id, []).append(inc.incident_id)
+            for node_tel in snapshot.nodes:
+                if node_tel.node_id in inc_by_node:
+                    node_tel.active_incident_ids = inc_by_node[node_tel.node_id]
+                    node_tel.pulse_intensity = 1.0
             self.latest_snapshot = snapshot
             self.latest_incidents = incidents
             return snapshot, incidents

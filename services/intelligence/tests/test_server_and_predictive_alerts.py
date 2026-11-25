@@ -16,12 +16,12 @@ from disha_intelligence.simulator import CrowdSimulator
 def test_detector_emits_predictive_medium_alert_from_forecast() -> None:
     detector = IncidentDetector()
     snapshot = TelemetrySnapshot(
-        venue_id="disha_arena_01",
+        venue_id="chinnaswamy_bengaluru",
         timestamp=datetime(2026, 11, 25, 19, 0, 0, tzinfo=UTC),
         event_phase="pre_event_ingress",
         nodes=[
             NodeTelemetry(
-                node_id="gate_north_a",
+                node_id="gate_1_cubbon",
                 occupancy=540,
                 capacity=900,
                 congestion_score=0.60,
@@ -30,12 +30,13 @@ def test_detector_emits_predictive_medium_alert_from_forecast() -> None:
                 flow_rate_per_min=65.0,
                 trend="rising",
                 status="moderate",
+                pulse_intensity=0.51,
             )
         ],
     )
     forecasts = [
         NodeForecast(
-            node_id="gate_north_a",
+            node_id="gate_1_cubbon",
             current_congestion=0.60,
             predicted_5m_congestion=0.88,
             predicted_10m_congestion=0.95,
@@ -49,6 +50,7 @@ def test_detector_emits_predictive_medium_alert_from_forecast() -> None:
     assert len(incidents) == 1
     assert incidents[0].severity == "medium"
     assert incidents[0].category == "queue_surge"
+    assert incidents[0].position is not None
     assert "Predicted Surge" in incidents[0].title
 
 
@@ -65,14 +67,15 @@ def test_http_server_endpoints_end_to_end() -> None:
             health = client.get("/health")
             assert health.status_code == 200
             assert health.json()["status"] == "ok"
+            assert health.json()["venue_id"] == "chinnaswamy_bengaluru"
 
             topo = client.get("/topology")
             assert topo.status_code == 200
-            assert topo.json()["venue_id"] == "disha_arena_01"
+            assert topo.json()["venue_id"] == "chinnaswamy_bengaluru"
 
             tel = client.get("/telemetry/latest")
             assert tel.status_code == 200
-            assert len(tel.json()["nodes"]) >= 20
+            assert len(tel.json()["nodes"]) == 26
 
             phase = client.post("/simulation/phase", json={"phase": "halftime_surge"})
             assert phase.status_code == 200
@@ -80,7 +83,7 @@ def test_http_server_endpoints_end_to_end() -> None:
 
             bn = client.post(
                 "/simulation/bottleneck",
-                json={"node_id": "gate_north_a", "severity": 0.96, "duration_ticks": 5},
+                json={"node_id": "gate_1_cubbon", "severity": 0.96, "duration_ticks": 5},
             )
             assert bn.status_code == 200
 
@@ -90,15 +93,21 @@ def test_http_server_endpoints_end_to_end() -> None:
 
             forecast = client.get("/forecast")
             assert forecast.status_code == 200
-            assert len(forecast.json()["forecasts"]) >= 20
+            assert len(forecast.json()["forecasts"]) == 26
 
             route = client.get(
                 "/routing/recommend",
-                params={"origin": "transit_north_metro", "target_type": "gate", "accessible": "true"},
+                params={
+                    "origin": "transit_cubbon_park_metro",
+                    "target_type": "gate",
+                    "accessible": "true",
+                },
             )
             assert route.status_code == 200
-            assert route.json()["accessible_only"] is True
-            assert len(route.json()["route_node_ids"]) >= 2
+            data = route.json()
+            assert data["accessible_only"] is True
+            assert len(data["waypoints_3d"]) >= 2
+            assert data["target_beacon"] is not None
     finally:
         server.shutdown()
         server.server_close()

@@ -10,6 +10,7 @@ from disha_intelligence.models import (
     IncidentCategory,
     IncidentSeverity,
     NodeTelemetry,
+    Position3D,
     StadiumTopology,
     TelemetrySnapshot,
     TopologyNode,
@@ -62,6 +63,16 @@ class IncidentDetector:
 
                 self._counter += 1
                 self._last_alert_time[key] = now
+                position = (
+                    Position3D(
+                        x=topo_node.x,
+                        y=topo_node.y,
+                        z=topo_node.z,
+                        level=topo_node.level,
+                    )
+                    if topo_node is not None
+                    else None
+                )
                 incidents.append(
                     AlertIncident(
                         incident_id=f"inc_{snapshot.venue_id}_{self._counter:05d}",
@@ -71,6 +82,7 @@ class IncidentDetector:
                         severity=severity,
                         status="open",
                         node_id=node_tel.node_id,
+                        position=position,
                         title=title,
                         description=description,
                         recommended_action=action,

@@ -11,7 +11,7 @@ from disha_intelligence.simulator import CrowdSimulator
 
 def test_incident_detector_flags_bottleneck_and_respects_cooldown() -> None:
     sim = CrowdSimulator(seed=42, initial_phase="halftime_surge")
-    sim.inject_bottleneck("concession_l1_north_grill", severity=0.96)
+    sim.inject_bottleneck("concession_north_express", severity=0.96)
     detector = IncidentDetector(topology=sim.topology, cooldown_seconds=30.0)
 
     all_incidents = []
@@ -19,12 +19,14 @@ def test_incident_detector_flags_bottleneck_and_respects_cooldown() -> None:
         snap = sim.step()
         all_incidents.extend(detector.analyze(snap))
 
-    grill_incidents = [i for i in all_incidents if i.node_id == "concession_l1_north_grill"]
-    assert len(grill_incidents) == 1
-    assert grill_incidents[0].category in ("crowd_bottleneck", "queue_surge")
-    assert grill_incidents[0].severity in ("high", "critical")
-    assert grill_incidents[0].status == "open"
-    assert grill_incidents[0].confidence is not None
+    food_incidents = [i for i in all_incidents if i.node_id == "concession_north_express"]
+    assert len(food_incidents) == 1
+    assert food_incidents[0].category in ("crowd_bottleneck", "queue_surge")
+    assert food_incidents[0].severity in ("high", "critical")
+    assert food_incidents[0].status == "open"
+    assert food_incidents[0].confidence is not None
+    assert food_incidents[0].position is not None
+    assert food_incidents[0].position.level == 1
 
 
 def test_publisher_posts_telemetry_and_incidents() -> None:
@@ -35,7 +37,7 @@ def test_publisher_posts_telemetry_and_incidents() -> None:
         return httpx.Response(200, json={"ok": True})
 
     sim = CrowdSimulator(seed=42, initial_phase="halftime_surge")
-    sim.inject_bottleneck("gate_north_a", severity=0.97)
+    sim.inject_bottleneck("gate_1_cubbon", severity=0.97)
     # Pre-warm 3 ticks so bottleneck congestion crosses threshold
     for _ in range(3):
         sim.step()
@@ -52,7 +54,7 @@ def test_publisher_posts_telemetry_and_incidents() -> None:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(transport=transport) as client:
             snapshot, incidents = await publisher.publish_tick(client)
-            assert snapshot.venue_id == "disha_arena_01"
+            assert snapshot.venue_id == "chinnaswamy_bengaluru"
             assert len(incidents) >= 1
 
     asyncio.run(_run())

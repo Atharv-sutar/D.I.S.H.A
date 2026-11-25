@@ -12,7 +12,7 @@ def test_forecaster_predicts_rising_congestion_under_bottleneck() -> None:
     for _ in range(5):
         forecaster.record(sim.step())
 
-    forecast = forecaster.forecast_node("concession_l1_north_grill")
+    forecast = forecaster.forecast_node("concession_north_express")
     assert 0.0 <= forecast.predicted_5m_congestion <= 1.0
     assert 0.0 <= forecast.predicted_10m_congestion <= 1.0
     assert forecast.predicted_5m_wait_min >= 0.0

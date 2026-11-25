@@ -214,6 +214,17 @@ class CrowdSimulator:
             prev_score = self._prev_scores.get(node.id)
             trend = _classify_trend(prev_score, congestion_score)
             status = _classify_status(congestion_score, node.status)
+            pulse_intensity = (
+                0.0
+                if node.status == "closed"
+                else round(
+                    min(
+                        1.0,
+                        congestion_score * 0.85 + (0.15 if node.id in self._bottlenecks else 0.0),
+                    ),
+                    4,
+                )
+            )
 
             self._prev_scores[node.id] = congestion_score
             self._prev_occupancy[node.id] = occupancy
@@ -230,6 +241,7 @@ class CrowdSimulator:
                     flow_rate_per_min=flow_rate,
                     trend=trend,
                     status=status,
+                    pulse_intensity=pulse_intensity,
                 )
             )
 

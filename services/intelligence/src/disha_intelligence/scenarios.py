@@ -1,4 +1,4 @@
-"""Named matchday simulation scenarios for testing and live demos."""
+"""Named matchday simulation scenarios for M. Chinnaswamy Stadium."""
 
 from __future__ import annotations
 
@@ -21,17 +21,17 @@ class ScenarioSpec:
 SCENARIOS: dict[str, ScenarioSpec] = {
     "matchday_ingress": ScenarioSpec(
         name="matchday_ingress",
-        description="Pre-event gate arrival surge with heavy load at North Gate A.",
+        description="Pre-event gate arrival surge with heavy load at Cubbon Road Gate 1.",
         phase="pre_event_ingress",
-        bottlenecks=(("gate_north_a", 0.93, 12),),
+        bottlenecks=(("gate_1_cubbon", 0.93, 12),),
     ),
     "halftime_rush": ScenarioSpec(
         name="halftime_rush",
-        description="Halftime concourse and concession spike with North Grill bottleneck.",
+        description="Halftime concourse and concession spike with North Food Hub bottleneck.",
         phase="halftime_surge",
         bottlenecks=(
-            ("concession_l1_north_grill", 0.96, 10),
-            ("restroom_l1_east", 0.90, 8),
+            ("concession_north_express", 0.96, 10),
+            ("restroom_east", 0.90, 8),
         ),
     ),
     "in_play_steady": ScenarioSpec(
@@ -41,9 +41,9 @@ SCENARIOS: dict[str, ScenarioSpec] = {
     ),
     "post_match_egress": ScenarioSpec(
         name="post_match_egress",
-        description="Post-event exit surge toward North Metro and South Rail transit hubs.",
+        description="Post-event exit surge toward Cubbon Park and M.G. Road Metro hubs.",
         phase="egress",
-        bottlenecks=(("transit_north_metro", 0.94, 15),),
+        bottlenecks=(("transit_cubbon_park_metro", 0.94, 15),),
     ),
 }
 
