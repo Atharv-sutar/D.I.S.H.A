@@ -130,11 +130,15 @@ class CrowdSimulator:
         self._prev_scores: dict[str, float] = {}
         self._prev_occupancy: dict[str, int] = {}
         self._bottlenecks: dict[str, _BottleneckConfig] = {}
+        self._recently_cleared: set[str] = set()
+        self._phase_just_changed: bool = False
         self._node_map: dict[str, TopologyNode] = {n.id: n for n in self.topology.nodes}
 
     def set_phase(self, phase: EventPhase) -> None:
         """Switch the active stadium event phase."""
-        self.event_phase = phase
+        if phase != self.event_phase:
+            self.event_phase = phase
+            self._phase_just_changed = True
 
     def inject_bottleneck(
         self,
@@ -146,6 +150,7 @@ class CrowdSimulator:
         if node_id not in self._node_map:
             raise KeyError(f"Unknown node_id: {node_id}")
         clamped = float(min(1.0, max(0.0, severity)))
+        self._recently_cleared.discard(node_id)
         self._bottlenecks[node_id] = _BottleneckConfig(
             severity=clamped,
             remaining_ticks=duration_ticks,
@@ -153,13 +158,15 @@ class CrowdSimulator:
 
     def clear_bottleneck(self, node_id: str) -> None:
         """Remove an injected bottleneck from a node."""
-        self._bottlenecks.pop(node_id, None)
+        if self._bottlenecks.pop(node_id, None) is not None:
+            self._recently_cleared.add(node_id)
 
     def sync_bottlenecks(self, bottlenecks: dict[str, float]) -> None:
         """Synchronize active bottlenecks to match an external control map."""
         for node_id in list(self._bottlenecks):
             if node_id not in bottlenecks:
                 del self._bottlenecks[node_id]
+                self._recently_cleared.add(node_id)
         for node_id, severity in bottlenecks.items():
             if node_id in self._node_map:
                 self.inject_bottleneck(node_id, severity=severity, duration_ticks=None)
@@ -189,8 +196,15 @@ class CrowdSimulator:
 
             target_occ = round(target_ratio * node.capacity)
             prev_occ = self._prev_occupancy.get(node.id, target_occ)
-            # Respond rapidly to injected bottlenecks so control panel changes reflect immediately
-            alpha = 0.85 if node.id in self._bottlenecks else 0.35
+            # Apply injected/cleared bottlenecks and phase transitions immediately
+            if (
+                node.id in self._bottlenecks
+                or node.id in self._recently_cleared
+                or self._phase_just_changed
+            ):
+                alpha = 1.0
+            else:
+                alpha = 0.35
             occupancy = max(0, round((1.0 - alpha) * prev_occ + alpha * target_occ))
             if node.status == "closed":
                 occupancy = 0
@@ -254,6 +268,8 @@ class CrowdSimulator:
                 )
             )
 
+        self._recently_cleared.clear()
+        self._phase_just_changed = False
         self._tick_bottlenecks()
 
         return TelemetrySnapshot(

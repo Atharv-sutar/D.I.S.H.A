@@ -47,3 +47,20 @@ def test_simulator_bottleneck_injection_and_expiry() -> None:
     gate2 = next(n for n in snap2.nodes if n.node_id == "gate_1_cubbon")
     assert gate2.status in ("high", "critical")
     assert "gate_1_cubbon" not in sim._bottlenecks
+
+
+def test_simulator_immediate_bottleneck_override_and_clear() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="in_play")
+    sim.step()
+
+    # Inject 96% bottleneck -> immediate jump on next single tick
+    sim.inject_bottleneck("gate_4_cubbon", severity=0.96)
+    snap_inj = sim.step()
+    gate = next(n for n in snap_inj.nodes if n.node_id == "gate_4_cubbon")
+    assert gate.congestion_score >= 0.94
+
+    # Clear bottleneck -> immediate drop back toward in_play gate baseline on next single tick
+    sim.clear_bottleneck("gate_4_cubbon")
+    snap_clr = sim.step()
+    gate_clr = next(n for n in snap_clr.nodes if n.node_id == "gate_4_cubbon")
+    assert gate_clr.congestion_score < 0.40

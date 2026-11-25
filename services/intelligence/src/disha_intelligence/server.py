@@ -221,6 +221,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"Invalid phase: {phase}"})
                     return
                 runtime.set_phase(phase)
+                runtime.step()
                 self._send_json(HTTPStatus.OK, {"phase": phase})
                 return
 
@@ -242,6 +243,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                     return
                 if body.get("clear") or body.get("active") is False:
                     runtime.clear_bottleneck(node_id)
+                    runtime.step()
                     self._send_json(HTTPStatus.OK, {"cleared": node_id})
                     return
                 try:
@@ -250,6 +252,7 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                         severity=float(body.get("severity", 0.92)),
                         duration_ticks=body.get("duration_ticks"),
                     )
+                    runtime.step()
                     self._send_json(HTTPStatus.OK, {"bottleneck": node_id})
                 except KeyError as exc:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})

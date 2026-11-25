@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 class PublisherConfig:
     """Configuration for the simulation publisher loop."""
 
-    ingest_url: str = "http://localhost:8000/api/v1/telemetry/ingest"
-    incidents_url: str = "http://localhost:8000/api/v1/incidents"
-    status_url: str = "http://localhost:8000/api/v1/simulation/status"
+    ingest_url: str = "http://127.0.0.1:8000/api/v1/telemetry/ingest"
+    incidents_url: str = "http://127.0.0.1:8000/api/v1/incidents"
+    status_url: str = "http://127.0.0.1:8000/api/v1/simulation/status"
     tick_interval_seconds: float = 2.0
     random_seed: int = 42
 
@@ -34,17 +34,17 @@ class PublisherConfig:
     def from_env(cls) -> PublisherConfig:
         """Load publisher configuration from environment variables."""
         ingest_url = os.getenv(
-            "BACKEND_INGEST_URL", "http://localhost:8000/api/v1/telemetry/ingest"
+            "BACKEND_INGEST_URL", "http://127.0.0.1:8000/api/v1/telemetry/ingest"
         )
         default_status_url = (
             ingest_url.rsplit("/api/v1/", 1)[0] + "/api/v1/simulation/status"
             if "/api/v1/" in ingest_url
-            else "http://localhost:8000/api/v1/simulation/status"
+            else "http://127.0.0.1:8000/api/v1/simulation/status"
         )
         return cls(
             ingest_url=ingest_url,
             incidents_url=os.getenv(
-                "BACKEND_INCIDENTS_URL", "http://localhost:8000/api/v1/incidents"
+                "BACKEND_INCIDENTS_URL", "http://127.0.0.1:8000/api/v1/incidents"
             ),
             status_url=os.getenv("BACKEND_SIM_STATUS_URL", default_status_url),
             tick_interval_seconds=float(os.getenv("TICK_INTERVAL_SECONDS", "2.0")),
