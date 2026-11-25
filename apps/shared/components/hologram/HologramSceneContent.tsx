@@ -114,9 +114,9 @@ function createArcExtrudeGeometry(
 
 function getSeatingHeatColor(score: number, level: number): string {
   if (score >= 0.8) return "#dc2626"; // Critical red
-  if (score >= 0.62) return "#ea580c"; // High orange
-  if (score >= 0.42) return "#d97706"; // Moderate amber
-  return level >= 2 ? "#7f1d1d" : "#9f1239"; // Chinnaswamy crimson seats
+  if (score >= 0.6) return "#ea580c"; // High orange
+  if (score >= 0.35) return "#d97706"; // Moderate amber
+  return level >= 2 ? "#16a34a" : "#10b981"; // Optimal / no congestion green
 }
 
 function SteppedStandSector({
@@ -212,7 +212,7 @@ function SteppedStandSector({
       >
         <meshStandardMaterial
           color={isSelected ? "#fbbf24" : "#3f3f46"}
-          emissive={isSelected ? "#f59e0b" : "#be123c"}
+          emissive={isSelected ? "#f59e0b" : seatColor}
           emissiveIntensity={isSelected ? 0.5 : 0.15}
           metalness={0.5}
           roughness={0.4}
