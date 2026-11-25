@@ -9,6 +9,7 @@
 - **Backend (`services/backend/`)**:
   - Added `gate_role` (`entry | exit | entry_exit`), `floodlight_towers`, and `stand_sectors` in `contracts/venues/chinnaswamy_stadium.json` & `models.py` (preserving exact 26 nodes / 38 edges for `services/intelligence/` compatibility).
   - Added `route_mode` (`entry | exit | facility`) support in `routing.py` & `GET /api/v1/routing/recommend` for dedicated entry/exit/destination waypoint paths.
+  - Resolved `Shreyas-D-M` handoff (`20261125-Shreyas-D-M-clear-bottleneck-fix.md`): updated `clear_demo_bottleneck` in `state.py` to reset congestion to `0.22` (`optimal`) and resolve congestion incidents for that node, and expanded `inject_demo_bottleneck` severity range to `0.05`–`0.99`.
   - All 7 backend unit & ASGI end-to-end tests passing.
 - **3D Stadium Digital Twin & UI Redesign (`apps/`, one-time user override)**:
   - Installed `three`, `@types/three`, `@react-three/fiber@^8.17.10`, `@react-three/drei@^9.117.3` in `apps/ops-dashboard/` and `apps/fan-app/`.

@@ -215,6 +215,19 @@ class BackendFoundationTests(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(cleared_snap["venue_id"], "chinnaswamy_bengaluru")
+        gate4_cleared = next(n for n in cleared_snap["nodes"] if n["node_id"] == "gate_4_cubbon")
+        self.assertLessEqual(gate4_cleared["congestion_score"], 0.35)
+        self.assertEqual(gate4_cleared["status"], "optimal")
+
+        status, low_bn_snap = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/bottleneck",
+            body={"node_id": "gate_4_cubbon", "severity": 0.15, "clear": False},
+        )
+        self.assertEqual(status, 200)
+        gate4_low = next(n for n in low_bn_snap["nodes"] if n["node_id"] == "gate_4_cubbon")
+        self.assertAlmostEqual(gate4_low["congestion_score"], 0.15, places=2)
 
         status, exit_routed = _run_asgi_request(
             self.app,

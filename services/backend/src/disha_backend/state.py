@@ -251,14 +251,26 @@ class StadiumStateStore:
         """Inject a localized demo congestion bottleneck on a node."""
         if node_id not in self.node_map:
             raise KeyError(f"Unknown stadium node_id: {node_id}")
-        self._bottleneck_overrides[node_id] = min(0.99, max(0.5, severity))
+        self._bottleneck_overrides[node_id] = min(0.99, max(0.05, severity))
         return self.step_demo_telemetry()
 
     def clear_demo_bottleneck(self, node_id: str) -> TelemetrySnapshot:
-        """Clear a previously injected demo bottleneck."""
+        """Clear a previously injected demo bottleneck and restore optimal baseline."""
         if node_id not in self.node_map:
             raise KeyError(f"Unknown stadium node_id: {node_id}")
         self._bottleneck_overrides.pop(node_id, None)
+        for node_telem in self.latest_telemetry.nodes:
+            if node_telem.node_id == node_id:
+                node_telem.congestion_score = 0.22
+                node_telem.status = "optimal"
+                break
+        for inc in self.incidents.values():
+            if (
+                inc.node_id == node_id
+                and inc.status != "resolved"
+                and inc.category in ("queue_surge", "crowd_bottleneck")
+            ):
+                inc.status = "resolved"
         return self.step_demo_telemetry()
 
     def reset_demo_state(self) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
