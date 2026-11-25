@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  AlertIncident,
   FanGuidanceResponse,
   StadiumTopology,
   TelemetrySnapshot,
+  UserPosition3D,
 } from "../types/contracts";
 import type {
   ConnectionStatus,
@@ -14,45 +16,72 @@ import type {
   RoutingQueryParams,
 } from "../types/ws";
 import {
+  fetchIncidents,
   fetchLatestTelemetry,
   fetchRoutingRecommend,
   fetchVenueTopology,
   getWsFanUrl,
+  locateFanPosition,
 } from "../lib/apiClient";
 import {
   createInitialAdvisories,
+  createInitialIncidents,
   createInitialTelemetry,
   MOCK_TOPOLOGY,
 } from "../mock/stadiumData";
 import {
   computeMockFanGuidance,
   generateMockFanAdvisory,
+  snapPositionToNodeClient,
   tickTelemetrySnapshot,
 } from "../mock/simulator";
 
 export interface UseFanStreamResult {
   topology: StadiumTopology;
   telemetry: TelemetrySnapshot;
+  incidents: AlertIncident[];
   advisories: FanAdvisoryItem[];
   guidance: FanGuidanceResponse | null;
+  userPosition: UserPosition3D;
   isRouting: boolean;
   mode: DataSourceMode;
   setMode: (mode: DataSourceMode) => void;
   connectionStatus: ConnectionStatus;
   lastUpdatedAt: string | null;
   requestGuidance: (params: RoutingQueryParams) => Promise<void>;
+  setUserCoordinates: (
+    x: number,
+    y: number,
+    level?: number,
+    headingDeg?: number
+  ) => Promise<void>;
 }
+
+const DEFAULT_USER_POSITION: UserPosition3D = {
+  x: -115,
+  y: 132,
+  z: 0,
+  level: 0,
+  heading_deg: 135,
+  snapped_node_id: "transit_cubbon_park_metro",
+};
 
 export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamResult {
   const [topology, setTopology] = useState<StadiumTopology>(MOCK_TOPOLOGY);
   const [telemetry, setTelemetry] = useState<TelemetrySnapshot>(() =>
     createInitialTelemetry()
   );
+  const [incidents, setIncidents] = useState<AlertIncident[]>(() =>
+    createInitialIncidents()
+  );
   const [advisories, setAdvisories] = useState<FanAdvisoryItem[]>(() =>
     createInitialAdvisories()
   );
   const [queryParams, setQueryParams] =
     useState<RoutingQueryParams>(initialParams);
+  const [userPosition, setUserPosition] = useState<UserPosition3D>(
+    DEFAULT_USER_POSITION
+  );
   const [guidance, setGuidance] = useState<FanGuidanceResponse | null>(() =>
     computeMockFanGuidance(MOCK_TOPOLOGY, createInitialTelemetry(), initialParams)
   );
@@ -64,6 +93,9 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
     new Date().toISOString()
   );
 
+  const fanIdRef = useRef<string>(
+    `fan_${Math.random().toString(36).slice(2, 8)}`
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const topologyRef = useRef(topology);
   topologyRef.current = topology;
@@ -71,6 +103,8 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
   telemetryRef.current = telemetry;
   const queryRef = useRef(queryParams);
   queryRef.current = queryParams;
+  const userPosRef = useRef(userPosition);
+  userPosRef.current = userPosition;
 
   const startSimulationMode = useCallback(() => {
     setConnectionStatus("simulation");
@@ -83,12 +117,20 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
       statusOverride?: ConnectionStatus
     ) => {
       setIsRouting(true);
-      setQueryParams(params);
+      const enrichedParams: RoutingQueryParams = {
+        ...params,
+        fan_id: fanIdRef.current,
+      };
+      setQueryParams(enrichedParams);
+
       const effectiveStatus = statusOverride ?? connectionStatus;
       if (effectiveStatus === "live") {
         try {
-          const liveResult = await fetchRoutingRecommend(params);
+          const liveResult = await fetchRoutingRecommend(enrichedParams);
           setGuidance(liveResult);
+          if (liveResult.user_position) {
+            setUserPosition(liveResult.user_position);
+          }
           setIsRouting(false);
           return;
         } catch {
@@ -98,12 +140,62 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
       const mockResult = computeMockFanGuidance(
         topologyRef.current,
         telemetryRef.current,
-        params
+        enrichedParams
       );
       setGuidance(mockResult);
+      if (mockResult.user_position) {
+        setUserPosition(mockResult.user_position);
+      }
       setIsRouting(false);
     },
     [connectionStatus]
+  );
+
+  const setUserCoordinates = useCallback(
+    async (x: number, y: number, level?: number, headingDeg = 0) => {
+      const snappedLocal = snapPositionToNodeClient(
+        topologyRef.current,
+        x,
+        y,
+        level
+      );
+      let nextPos: UserPosition3D = {
+        x: Number(x.toFixed(1)),
+        y: Number(y.toFixed(1)),
+        z: snappedLocal.node.z ?? 0,
+        level: level ?? snappedLocal.node.level,
+        heading_deg: headingDeg,
+        snapped_node_id: snappedLocal.node.id,
+      };
+
+      if (connectionStatus === "live") {
+        try {
+          const res = await locateFanPosition({
+            fan_id: fanIdRef.current,
+            x,
+            y,
+            z: snappedLocal.node.z ?? 0,
+            level,
+            heading_deg: headingDeg,
+          });
+          nextPos = res.user_position;
+        } catch {
+          // Use local snap fallback
+        }
+      }
+
+      setUserPosition(nextPos);
+      await runGuidance({
+        ...queryRef.current,
+        origin: nextPos.snapped_node_id,
+        user_x: nextPos.x,
+        user_y: nextPos.y,
+        user_z: nextPos.z,
+        user_level: nextPos.level,
+        heading_deg: nextPos.heading_deg,
+      });
+    },
+    [connectionStatus, runGuidance]
   );
 
   useEffect(() => {
@@ -123,13 +215,15 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
 
     const init = async () => {
       try {
-        const [topo, snap] = await Promise.all([
+        const [topo, snap, incs] = await Promise.all([
           fetchVenueTopology(),
           fetchLatestTelemetry(),
+          fetchIncidents().catch(() => createInitialIncidents()),
         ]);
         if (cancelled) return;
         setTopology(topo);
         setTelemetry(snap);
+        setIncidents(incs);
         setLastUpdatedAt(snap.timestamp || new Date().toISOString());
         await runGuidance(queryRef.current, "live");
       } catch {
@@ -190,7 +284,6 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
     };
   }, [mode, startSimulationMode, runGuidance]);
 
-  // Simulation loop for live fan wait times & advisories
   useEffect(() => {
     if (connectionStatus !== "simulation") return;
     const timer = setInterval(() => {
@@ -198,7 +291,14 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
         const next = tickTelemetrySnapshot(prev, topologyRef.current);
         setLastUpdatedAt(next.timestamp);
         setGuidance(
-          computeMockFanGuidance(topologyRef.current, next, queryRef.current)
+          computeMockFanGuidance(topologyRef.current, next, {
+            ...queryRef.current,
+            user_x: userPosRef.current.x,
+            user_y: userPosRef.current.y,
+            user_z: userPosRef.current.z,
+            user_level: userPosRef.current.level,
+            heading_deg: userPosRef.current.heading_deg,
+          })
         );
         if (Math.random() < 0.3) {
           const nextAdvisory = generateMockFanAdvisory(
@@ -216,13 +316,16 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
   return {
     topology,
     telemetry,
+    incidents,
     advisories,
     guidance,
+    userPosition,
     isRouting,
     mode,
     setMode,
     connectionStatus,
     lastUpdatedAt,
     requestGuidance: (params) => runGuidance(params),
+    setUserCoordinates,
   };
 }

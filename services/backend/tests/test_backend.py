@@ -216,6 +216,19 @@ class BackendFoundationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(cleared_snap["venue_id"], "chinnaswamy_bengaluru")
 
+        status, exit_routed = _run_asgi_request(
+            self.app,
+            "GET",
+            "/api/v1/routing/recommend?origin=stand_e_lower&route_mode=exit",
+        )
+        self.assertEqual(status, 200)
+        self.assertNotEqual(exit_routed["recommended_target_id"], "gate_1_cubbon")
+        self.assertIn(
+            exit_routed["recommended_target_id"],
+            ("gate_4_cubbon", "gate_9_mg", "gate_14_pavilion", "gate_18_queens"),
+        )
+        self.assertGreaterEqual(len(exit_routed["waypoints_3d"]), 2)
+
         first_inc = self.store.list_incidents()[0]
         advisory = _incident_to_fan_advisory(first_inc)
         self.assertIn("advisory_id", advisory)

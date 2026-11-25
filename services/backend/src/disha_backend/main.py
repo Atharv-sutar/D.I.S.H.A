@@ -29,6 +29,7 @@ from disha_backend.models import (
     NodeForecast,
     NodeType,
     OpsOverviewResponse,
+    RouteMode,
     SimulationPhaseRequest,
     StadiumTopology,
     TelemetrySnapshot,
@@ -250,6 +251,7 @@ def create_app() -> FastAPI:
         heading_deg: float = Query(0.0, description="Fan compass heading in degrees"),
         target_type: Optional[NodeType] = Query("gate", description="Facility category"),
         target_id: Optional[str] = Query(None, description="Optional exact destination node ID"),
+        route_mode: Optional[RouteMode] = Query(None, description="entry | exit | facility"),
         accessible: bool = Query(False, description="Require step-free accessible paths"),
     ) -> FanGuidanceResponse:
         """Compute congestion-aware route and game-style 3D waypoints."""
@@ -279,6 +281,7 @@ def create_app() -> FastAPI:
                 target_id=target_id,
                 accessible_only=accessible,
                 user_position=user_pos,
+                route_mode=route_mode,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

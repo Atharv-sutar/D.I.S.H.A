@@ -8,7 +8,7 @@ import type {
   StadiumTopology,
   TelemetrySnapshot,
 } from "@shared/types/contracts";
-import { getCongestionVisuals } from "@shared/lib/congestion";
+import { getCongestionVisuals, toSvgPoint } from "@shared/lib/congestion";
 
 interface WayfindingMapProps {
   topology: StadiumTopology;
@@ -168,13 +168,15 @@ export function WayfindingMap({
             const from = nodeMap.get(edge.from_node);
             const to = nodeMap.get(edge.to_node);
             if (!from || !to) return null;
+            const p1 = toSvgPoint(from.x, from.y);
+            const p2 = toSvgPoint(to.x, to.y);
             return (
               <line
                 key={edge.id}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
+                x1={p1.sx}
+                y1={p1.sy}
+                x2={p2.sx}
+                y2={p2.sy}
                 stroke="#1e293b"
                 strokeWidth="4"
                 strokeDasharray={edge.accessible === false ? "6 6" : undefined}
@@ -183,30 +185,34 @@ export function WayfindingMap({
           })}
 
           {/* Highlighted route path */}
-          {routeSegments.map((seg, idx) => (
-            <g key={`${seg.from.id}-${seg.to.id}-${idx}`}>
-              <line
-                x1={seg.from.x}
-                y1={seg.from.y}
-                x2={seg.to.x}
-                y2={seg.to.y}
-                stroke="#10b981"
-                strokeWidth="12"
-                strokeOpacity="0.25"
-                strokeLinecap="round"
-              />
-              <line
-                x1={seg.from.x}
-                y1={seg.from.y}
-                x2={seg.to.x}
-                y2={seg.to.y}
-                stroke="#34d399"
-                strokeWidth="5"
-                strokeDasharray="10 6"
-                strokeLinecap="round"
-              />
-            </g>
-          ))}
+          {routeSegments.map((seg, idx) => {
+            const p1 = toSvgPoint(seg.from.x, seg.from.y);
+            const p2 = toSvgPoint(seg.to.x, seg.to.y);
+            return (
+              <g key={`${seg.from.id}-${seg.to.id}-${idx}`}>
+                <line
+                  x1={p1.sx}
+                  y1={p1.sy}
+                  x2={p2.sx}
+                  y2={p2.sy}
+                  stroke="#10b981"
+                  strokeWidth="12"
+                  strokeOpacity="0.25"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={p1.sx}
+                  y1={p1.sy}
+                  x2={p2.sx}
+                  y2={p2.sy}
+                  stroke="#34d399"
+                  strokeWidth="5"
+                  strokeDasharray="10 6"
+                  strokeLinecap="round"
+                />
+              </g>
+            );
+          })}
 
           {/* Nodes */}
           {levelNodes.map((node) => {
@@ -216,13 +222,14 @@ export function WayfindingMap({
             const isDest = guidance?.destination_node_id === node.id;
             const onRoute = routeSet.has(node.id);
             const r = isOrigin || isDest ? 22 : onRoute ? 16 : 13;
+            const { sx, sy } = toSvgPoint(node.x, node.y);
 
             return (
               <g key={node.id}>
                 {(isOrigin || isDest) && (
                   <circle
-                    cx={node.x}
-                    cy={node.y}
+                    cx={sx}
+                    cy={sy}
                     r={32}
                     fill={isDest ? "#10b981" : "#38bdf8"}
                     fillOpacity={0.22}
@@ -230,8 +237,8 @@ export function WayfindingMap({
                   />
                 )}
                 <circle
-                  cx={node.x}
-                  cy={node.y}
+                  cx={sx}
+                  cy={sy}
                   r={r}
                   fill={
                     isDest
@@ -246,8 +253,8 @@ export function WayfindingMap({
                 />
                 {(isOrigin || isDest) && (
                   <text
-                    x={node.x}
-                    y={node.y + 4}
+                    x={sx}
+                    y={sy + 4}
                     textAnchor="middle"
                     fill="#020617"
                     fontSize="11"
@@ -257,8 +264,8 @@ export function WayfindingMap({
                   </text>
                 )}
                 <text
-                  x={node.x}
-                  y={node.y + r + 15}
+                  x={sx}
+                  y={sy + r + 15}
                   textAnchor="middle"
                   fill={onRoute ? "#ffffff" : "#94a3b8"}
                   fontSize={onRoute ? "13" : "11"}

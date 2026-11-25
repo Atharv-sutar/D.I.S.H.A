@@ -10,7 +10,7 @@ import type {
   StadiumTopology,
   TelemetrySnapshot,
 } from "@shared/types/contracts";
-import { getCongestionVisuals } from "@shared/lib/congestion";
+import { getCongestionVisuals, toSvgPoint } from "@shared/lib/congestion";
 
 interface StadiumHeatmapProps {
   topology: StadiumTopology;
@@ -202,13 +202,15 @@ export function StadiumHeatmap({
               const from = nodeMap.get(edge.from_node);
               const to = nodeMap.get(edge.to_node);
               if (!from || !to) return null;
+              const p1 = toSvgPoint(from.x, from.y);
+              const p2 = toSvgPoint(to.x, to.y);
               return (
                 <line
                   key={edge.id}
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
+                  x1={p1.sx}
+                  y1={p1.sy}
+                  x2={p2.sx}
+                  y2={p2.sy}
                   stroke="#334155"
                   strokeWidth={Math.max(2, edge.width_m * 0.7)}
                   strokeDasharray={edge.accessible === false ? "8 6" : undefined}
@@ -228,6 +230,7 @@ export function StadiumHeatmap({
                 node.type === "gate" || node.type === "seating_section"
                   ? 22
                   : 17;
+              const { sx, sy } = toSvgPoint(node.x, node.y);
 
               return (
                 <g
@@ -237,8 +240,8 @@ export function StadiumHeatmap({
                 >
                   {(t?.status === "critical" || hasAlert) && (
                     <circle
-                      cx={node.x}
-                      cy={node.y}
+                      cx={sx}
+                      cy={sy}
                       r={radius + 12}
                       fill={visuals.hex}
                       fillOpacity={0.22}
@@ -246,8 +249,8 @@ export function StadiumHeatmap({
                     />
                   )}
                   <circle
-                    cx={node.x}
-                    cy={node.y}
+                    cx={sx}
+                    cy={sy}
                     r={radius}
                     fill={visuals.hex}
                     fillOpacity={0.88}
@@ -255,8 +258,8 @@ export function StadiumHeatmap({
                     strokeWidth={isSelected ? 4 : 2.5}
                   />
                   <text
-                    x={node.x}
-                    y={node.y + 4}
+                    x={sx}
+                    y={sy + 4}
                     textAnchor="middle"
                     fill="#020617"
                     fontSize="12"
@@ -265,8 +268,8 @@ export function StadiumHeatmap({
                     {Math.round(score * 100)}
                   </text>
                   <text
-                    x={node.x}
-                    y={node.y + radius + 16}
+                    x={sx}
+                    y={sy + radius + 16}
                     textAnchor="middle"
                     fill="#cbd5e1"
                     fontSize="13"

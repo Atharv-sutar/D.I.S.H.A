@@ -118,6 +118,16 @@ export function formatRelativeSeconds(isoTimestamp: string | null): string {
   return `${mins}m ago`;
 }
 
+export function toSvgPoint(x: number, y: number): { sx: number; sy: number } {
+  if (Math.abs(x) <= 220 && Math.abs(y) <= 220) {
+    return {
+      sx: Number((500 + x * 2.65).toFixed(1)),
+      sy: Number((500 - y * 2.65).toFixed(1)),
+    };
+  }
+  return { sx: x, sy: y };
+}
+
 export function sortIncidentsByPriority(
   incidents: AlertIncident[]
 ): AlertIncident[] {

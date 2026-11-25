@@ -10,6 +10,7 @@ from disha_backend.models import (
     FanGuidanceResponse,
     NodeTelemetry,
     NodeType,
+    RouteMode,
     RouteStep,
     StadiumEdge,
     StadiumNode,
@@ -190,8 +191,9 @@ def recommend_route(
     target_id: str | None = None,
     accessible_only: bool = False,
     user_position: UserPosition3D | None = None,
+    route_mode: RouteMode | None = None,
 ) -> FanGuidanceResponse:
-    """Select the least-congested facility or path and emit 3D hologram waypoints."""
+    """Select the least-congested facility or entry/exit gate and emit 3D hologram waypoints."""
     node_map = {n.id: n for n in topology.nodes}
     if origin_node_id not in node_map:
         raise ValueError(f"Unknown origin node: {origin_node_id}")
@@ -209,10 +211,22 @@ def recommend_route(
             raise ValueError(f"Unknown target node: {target_id}")
         candidate_nodes = [node_map[target_id]]
     else:
-        desired_type = target_type or "gate"
+        desired_type = "gate" if route_mode in ("entry", "exit") else (target_type or "gate")
         candidate_nodes = [
             n for n in topology.nodes if n.type == desired_type and n.status != "closed"
         ]
+        if desired_type == "gate" and route_mode == "exit":
+            exit_gates = [
+                n for n in candidate_nodes if n.gate_role in ("exit", "entry_exit")
+            ]
+            if exit_gates:
+                candidate_nodes = exit_gates
+        elif desired_type == "gate" and route_mode == "entry":
+            entry_gates = [
+                n for n in candidate_nodes if n.gate_role in ("entry", "entry_exit", None)
+            ]
+            if entry_gates:
+                candidate_nodes = entry_gates
         if not candidate_nodes:
             raise ValueError(f"No open facilities of type '{desired_type}' found")
 

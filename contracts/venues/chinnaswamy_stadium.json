@@ -42,6 +42,98 @@
       { "name": "Cubbon Road", "label_x": 35, "label_y": 146, "angle_deg": 0 },
       { "name": "Queen's Road", "label_x": -148, "label_y": -10, "angle_deg": 90 },
       { "name": "M.G. Road Corridor", "label_x": 118, "label_y": -125, "angle_deg": -45 }
+    ],
+    "floodlight_towers": [
+      { "id": "fl_nw", "name": "North-West Floodlight Tower", "x": -96, "y": 96, "height_m": 46 },
+      { "id": "fl_ne", "name": "North-East Floodlight Tower", "x": 96, "y": 96, "height_m": 46 },
+      { "id": "fl_se", "name": "South-East Floodlight Tower", "x": 96, "y": -96, "height_m": 46 },
+      { "id": "fl_sw", "name": "South-West Floodlight Tower", "x": -96, "y": -96, "height_m": 46 }
+    ],
+    "stand_sectors": [
+      {
+        "id": "sec_e_lower",
+        "name": "E Stand Lower (Dravid End)",
+        "level": 1,
+        "start_deg": 55,
+        "end_deg": 125,
+        "inner_radius_m": 72,
+        "outer_radius_m": 100,
+        "elevation_m": 4.5,
+        "height_m": 7.5,
+        "linked_node_id": "stand_e_lower"
+      },
+      {
+        "id": "sec_h_upper",
+        "name": "H Upper Stand (North-East)",
+        "level": 2,
+        "start_deg": 18,
+        "end_deg": 78,
+        "inner_radius_m": 102,
+        "outer_radius_m": 124,
+        "elevation_m": 13.5,
+        "height_m": 9.0,
+        "linked_node_id": "stand_h_upper"
+      },
+      {
+        "id": "sec_f1_f2",
+        "name": "F1 & F2 Stands (East Bowl)",
+        "level": 1,
+        "start_deg": -32,
+        "end_deg": 50,
+        "inner_radius_m": 72,
+        "outer_radius_m": 100,
+        "elevation_m": 4.5,
+        "height_m": 7.5,
+        "linked_node_id": "stand_f1_f2"
+      },
+      {
+        "id": "sec_a_c",
+        "name": "A & C Stands (South-East)",
+        "level": 1,
+        "start_deg": -72,
+        "end_deg": -35,
+        "inner_radius_m": 72,
+        "outer_radius_m": 100,
+        "elevation_m": 4.5,
+        "height_m": 7.5,
+        "linked_node_id": "stand_a_c_bowl"
+      },
+      {
+        "id": "sec_b_lower",
+        "name": "B Lower (Shantha Rangaswamy Stand)",
+        "level": 1,
+        "start_deg": -125,
+        "end_deg": -76,
+        "inner_radius_m": 72,
+        "outer_radius_m": 100,
+        "elevation_m": 4.5,
+        "height_m": 7.5,
+        "linked_node_id": "stand_b_lower"
+      },
+      {
+        "id": "sec_pavilion_p2",
+        "name": "Pavilion P2 & Terrace (Kumble End)",
+        "level": 2,
+        "start_deg": 140,
+        "end_deg": 225,
+        "inner_radius_m": 94,
+        "outer_radius_m": 124,
+        "elevation_m": 13.5,
+        "height_m": 10.5,
+        "linked_node_id": "stand_pavilion_p2"
+      },
+      {
+        "id": "sec_corp_west",
+        "name": "Corporate & Media Wing (West)",
+        "level": 1,
+        "start_deg": 130,
+        "end_deg": 230,
+        "inner_radius_m": 72,
+        "outer_radius_m": 94,
+        "elevation_m": 4.5,
+        "height_m": 7.5,
+        "linked_node_id": "concourse_west_pavilion"
+      }
     ]
   },
   "nodes": [
@@ -81,6 +173,7 @@
       "z": 0,
       "stand_code": "Gate 1",
       "road_perimeter": "Cubbon Road",
+      "gate_role": "entry",
       "capacity": 900,
       "accessible": true,
       "status": "open"
@@ -95,6 +188,7 @@
       "z": 0,
       "stand_code": "Gate 4",
       "road_perimeter": "Cubbon Road",
+      "gate_role": "entry_exit",
       "capacity": 950,
       "accessible": true,
       "status": "open"
@@ -109,6 +203,7 @@
       "z": 0,
       "stand_code": "Gate 9",
       "road_perimeter": "M.G. Road Corridor",
+      "gate_role": "entry_exit",
       "capacity": 1000,
       "accessible": true,
       "status": "open"
@@ -123,6 +218,7 @@
       "z": 0,
       "stand_code": "Gate 14",
       "road_perimeter": "Queen's Road",
+      "gate_role": "entry_exit",
       "capacity": 700,
       "accessible": true,
       "status": "open"
@@ -137,6 +233,7 @@
       "z": 0,
       "stand_code": "Gate 18",
       "road_perimeter": "Queen's Road",
+      "gate_role": "entry_exit",
       "capacity": 850,
       "accessible": true,
       "status": "open"

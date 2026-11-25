@@ -1,7 +1,16 @@
 "use client";
 
-import { Accessibility, DoorOpen, MapPin, Armchair, Utensils, Bath } from "lucide-react";
-import type { StadiumTopology } from "@shared/types/contracts";
+import {
+  Accessibility,
+  Armchair,
+  Bath,
+  Cross,
+  DoorOpen,
+  LogOut,
+  MapPin,
+  Utensils,
+} from "lucide-react";
+import type { RouteMode, StadiumTopology } from "@shared/types/contracts";
 import type { RoutingQueryParams, RoutingTargetType } from "@shared/types/ws";
 
 interface WayfindingControlsProps {
@@ -12,32 +21,58 @@ interface WayfindingControlsProps {
 }
 
 const TARGET_INTENTS: {
+  id: string;
   type: RoutingTargetType;
+  route_mode: RouteMode;
   label: string;
   subtitle: string;
   icon: React.ReactNode;
 }[] = [
   {
+    id: "entry_gate",
     type: "gate",
-    label: "Least Crowded Gate",
-    subtitle: "Fastest entry",
+    route_mode: "entry",
+    label: "Least Crowded Entry",
+    subtitle: "Entry waypoints",
     icon: <DoorOpen className="h-4 w-4" />,
   },
   {
+    id: "exit_gate",
+    type: "gate",
+    route_mode: "exit",
+    label: "Fastest Exit",
+    subtitle: "Exit waypoints",
+    icon: <LogOut className="h-4 w-4" />,
+  },
+  {
+    id: "concession",
     type: "concession",
+    route_mode: "facility",
     label: "Food & Drinks",
     subtitle: "Walk + wait",
     icon: <Utensils className="h-4 w-4" />,
   },
   {
+    id: "restroom",
     type: "restroom",
+    route_mode: "facility",
     label: "Restroom",
     subtitle: "Shortest line",
     icon: <Bath className="h-4 w-4" />,
   },
   {
+    id: "medical",
+    type: "medical",
+    route_mode: "facility",
+    label: "First Aid",
+    subtitle: "Medical post",
+    icon: <Cross className="h-4 w-4" />,
+  },
+  {
+    id: "seating_section",
     type: "seating_section",
-    label: "My Section",
+    route_mode: "facility",
+    label: "My Stand",
     subtitle: "To seats",
     icon: <Armchair className="h-4 w-4" />,
   },
@@ -57,9 +92,13 @@ export function WayfindingControls({
       n.type === "seating_section"
   );
 
-  const targetCandidates = topology.nodes.filter(
-    (n) => n.type === params.target_type
-  );
+  const targetCandidates = topology.nodes.filter((n) => {
+    if (n.type !== params.target_type) return false;
+    if (params.route_mode === "exit") {
+      return n.gate_role === "exit" || n.gate_role === "entry_exit";
+    }
+    return true;
+  });
 
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3.5">
@@ -95,7 +134,13 @@ export function WayfindingControls({
           <select
             value={params.origin}
             onChange={(e) =>
-              onChangeParams({ ...params, origin: e.target.value })
+              onChangeParams({
+                ...params,
+                origin: e.target.value,
+                user_x: undefined,
+                user_y: undefined,
+                user_level: undefined,
+              })
             }
             className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
           >
@@ -131,30 +176,32 @@ export function WayfindingControls({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {TARGET_INTENTS.map((intent) => {
-          const active = params.target_type === intent.type;
+          const active =
+            params.target_type === intent.type &&
+            (intent.type !== "gate" ||
+              (params.route_mode ?? "entry") === intent.route_mode);
           return (
             <button
-              key={intent.type}
+              key={intent.id}
               type="button"
               disabled={isRouting}
               onClick={() =>
                 onChangeParams({
                   ...params,
                   target_type: intent.type,
+                  route_mode: intent.route_mode,
                   target_id: undefined,
                 })
               }
-              className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition ${
+              className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition ${
                 active
                   ? "border-emerald-500/60 bg-emerald-500/15 text-white"
                   : "border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-700"
               }`}
             >
-              <span
-                className={active ? "text-emerald-300" : "text-slate-400"}
-              >
+              <span className={active ? "text-emerald-300" : "text-slate-400"}>
                 {intent.icon}
               </span>
               <span className="min-w-0">

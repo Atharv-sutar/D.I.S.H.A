@@ -1,6 +1,10 @@
 import type {
+  ActiveFanSession,
   AlertIncident,
+  EventPhase,
   FanGuidanceResponse,
+  LocateFanRequest,
+  LocateFanResponse,
   StadiumTopology,
   TelemetrySnapshot,
 } from "../types/contracts";
@@ -75,6 +79,22 @@ export async function fetchIncidents(
   return fetchJson<AlertIncident[]>(`${baseUrl}/api/v1/incidents`);
 }
 
+export async function fetchActiveFans(
+  baseUrl = getApiBaseUrl()
+): Promise<ActiveFanSession[]> {
+  return fetchJson<ActiveFanSession[]>(`${baseUrl}/api/v1/fans/active`);
+}
+
+export async function locateFanPosition(
+  payload: LocateFanRequest,
+  baseUrl = getApiBaseUrl()
+): Promise<LocateFanResponse> {
+  return fetchJson<LocateFanResponse>(`${baseUrl}/api/v1/fans/locate`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function patchIncident(
   incidentId: string,
   payload: IncidentPatchPayload,
@@ -89,6 +109,16 @@ export async function patchIncident(
   );
 }
 
+export async function setSimulationPhase(
+  phase: EventPhase,
+  baseUrl = getApiBaseUrl()
+): Promise<TelemetrySnapshot> {
+  return fetchJson<TelemetrySnapshot>(`${baseUrl}/api/v1/simulation/phase`, {
+    method: "POST",
+    body: JSON.stringify({ phase }),
+  });
+}
+
 export async function fetchRoutingRecommend(
   params: RoutingQueryParams,
   baseUrl = getApiBaseUrl()
@@ -98,8 +128,17 @@ export async function fetchRoutingRecommend(
     target_type: params.target_type,
     accessible: String(Boolean(params.accessible)),
   });
-  if (params.target_id) {
-    query.set("target_id", params.target_id);
+  if (params.fan_id) query.set("fan_id", params.fan_id);
+  if (params.target_id) query.set("target_id", params.target_id);
+  if (params.route_mode) query.set("route_mode", params.route_mode);
+  if (params.user_x !== undefined) query.set("user_x", String(params.user_x));
+  if (params.user_y !== undefined) query.set("user_y", String(params.user_y));
+  if (params.user_z !== undefined) query.set("user_z", String(params.user_z));
+  if (params.user_level !== undefined) {
+    query.set("user_level", String(params.user_level));
+  }
+  if (params.heading_deg !== undefined) {
+    query.set("heading_deg", String(params.heading_deg));
   }
   return fetchJson<FanGuidanceResponse>(
     `${baseUrl}/api/v1/routing/recommend?${query.toString()}`

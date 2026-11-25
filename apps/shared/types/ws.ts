@@ -2,6 +2,7 @@ import type {
   AlertIncident,
   IncidentStatus,
   NodeType,
+  RouteMode,
   TelemetrySnapshot,
 } from "./contracts";
 
@@ -65,13 +66,20 @@ export interface IncidentPatchPayload {
 
 export type RoutingTargetType = Extract<
   NodeType,
-  "gate" | "concession" | "restroom" | "seating_section"
+  "gate" | "concession" | "restroom" | "medical" | "seating_section"
 >;
 
 export interface RoutingQueryParams {
   origin: string;
+  fan_id?: string;
+  user_x?: number;
+  user_y?: number;
+  user_z?: number;
+  user_level?: number;
+  heading_deg?: number;
   target_type: RoutingTargetType;
   target_id?: string;
+  route_mode?: RouteMode;
   accessible?: boolean;
 }
 

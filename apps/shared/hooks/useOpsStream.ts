@@ -6,6 +6,7 @@ import type {
   IncidentStatus,
   StadiumTopology,
   TelemetrySnapshot,
+  UserPosition3D,
 } from "../types/contracts";
 import type {
   ConnectionStatus,
@@ -13,6 +14,7 @@ import type {
   OpsWsEnvelope,
 } from "../types/ws";
 import {
+  fetchActiveFans,
   fetchIncidents,
   fetchLatestTelemetry,
   fetchVenueTopology,
@@ -33,6 +35,7 @@ export interface UseOpsStreamResult {
   topology: StadiumTopology;
   telemetry: TelemetrySnapshot;
   incidents: AlertIncident[];
+  activeFans: UserPosition3D[];
   mode: DataSourceMode;
   setMode: (mode: DataSourceMode) => void;
   connectionStatus: ConnectionStatus;
@@ -54,6 +57,24 @@ export function useOpsStream(): UseOpsStreamResult {
   const [incidents, setIncidents] = useState<AlertIncident[]>(() =>
     createInitialIncidents()
   );
+  const [activeFans, setActiveFans] = useState<UserPosition3D[]>([
+    {
+      x: -110,
+      y: 122,
+      z: 0,
+      level: 0,
+      heading_deg: 135,
+      snapped_node_id: "transit_cubbon_park_metro",
+    },
+    {
+      x: 4,
+      y: 78,
+      z: 6.5,
+      level: 1,
+      heading_deg: 180,
+      snapped_node_id: "stand_e_lower",
+    },
+  ]);
   const [mode, setMode] = useState<DataSourceMode>("auto");
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
@@ -84,14 +105,18 @@ export function useOpsStream(): UseOpsStreamResult {
 
     setConnectionStatus("connecting");
     try {
-      const [topo, snap, incs] = await Promise.all([
+      const [topo, snap, incs, fans] = await Promise.all([
         fetchVenueTopology(),
         fetchLatestTelemetry(),
         fetchIncidents(),
+        fetchActiveFans().catch(() => []),
       ]);
       setTopology(topo);
       setTelemetry(snap);
       setIncidents(incs);
+      if (fans.length > 0) {
+        setActiveFans(fans.map((f) => f.user_position));
+      }
       setLastUpdatedAt(snap.timestamp || new Date().toISOString());
     } catch {
       if (mode === "live") {
@@ -234,6 +259,7 @@ export function useOpsStream(): UseOpsStreamResult {
     topology,
     telemetry,
     incidents,
+    activeFans,
     mode,
     setMode,
     connectionStatus,
