@@ -37,6 +37,11 @@ export interface CameraTargetSpec {
   preset: CameraPreset;
 }
 
+export interface CameraNavCommand {
+  id: number;
+  type: "zoom_in" | "zoom_out" | "rotate_left" | "rotate_right";
+}
+
 interface HologramSceneContentProps {
   topology: StadiumTopology;
   telemetry: TelemetrySnapshot;
@@ -48,7 +53,9 @@ interface HologramSceneContentProps {
   selectedNodeId?: string | null;
   layerFilter: HologramLayerFilter;
   placeUserMode: boolean;
+  dragMode: "rotate" | "pan";
   cameraRequest: CameraTargetSpec;
+  navCommand: CameraNavCommand;
   showLabels: boolean;
   onSelectNode?: (nodeId: string) => void;
   onPlaceUser?: (x: number, y: number, level: number) => void;
@@ -181,7 +188,7 @@ function SteppedStandSector({
   }, [sector]);
 
   const seatColor = getSeatingHeatColor(congestionScore, sector.level);
-  const concreteColor = sector.level >= 2 ? "#27272a" : "#1f2025";
+  const concreteColor = sector.level >= 2 ? "#cbd5e1" : "#94a3b8";
   const radialLen = sector.outer_radius_m - sector.inner_radius_m;
 
   return (
@@ -611,12 +618,12 @@ function GatePortalMarker({
               e.stopPropagation();
               onSelect?.(node.id);
             }}
-            className={`whitespace-nowrap rounded-lg border px-2 py-0.5 text-[10px] font-bold shadow-lg transition ${
+            className={`whitespace-nowrap rounded border px-2 py-0.5 text-[10px] font-semibold shadow-sm transition ${
               isSelected
-                ? "border-amber-300 bg-zinc-950/95 text-amber-200"
+                ? "border-amber-500 bg-amber-50 text-amber-900"
                 : isOnRoute
-                  ? "border-emerald-400 bg-emerald-950/95 text-emerald-100"
-                  : "border-zinc-700 bg-zinc-950/90 text-zinc-100 hover:border-amber-400"
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-900"
+                  : "border-slate-300 bg-white/95 text-slate-900 hover:border-slate-500"
             }`}
           >
             {node.stand_code ?? node.name} · {Math.round(score * 100)}%
@@ -992,10 +999,14 @@ function WaypointTrail3D({
 
 function CameraRig({
   cameraRequest,
+  navCommand,
+  dragMode,
   userPosition,
   seatLocation,
 }: {
   cameraRequest: CameraTargetSpec;
+  navCommand: CameraNavCommand;
+  dragMode: "rotate" | "pan";
   userPosition?: UserPosition3D | null;
   seatLocation?: DetectedSeatLocation | null;
 }) {
@@ -1033,9 +1044,29 @@ function CameraRig({
     animatingRef.current = true;
   }, [cameraRequest.id, cameraRequest.preset]);
 
+  useEffect(() => {
+    if (navCommand.id === 0 || !controlsRef.current) return;
+    const target = controlsRef.current.target.clone();
+    const offset = camera.position.clone().sub(target);
+    if (navCommand.type === "zoom_in") {
+      offset.multiplyScalar(0.76);
+      if (offset.length() < 28) offset.setLength(28);
+    } else if (navCommand.type === "zoom_out") {
+      offset.multiplyScalar(1.28);
+      if (offset.length() > 450) offset.setLength(450);
+    } else if (navCommand.type === "rotate_left") {
+      offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 6);
+    } else if (navCommand.type === "rotate_right") {
+      offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 6);
+    }
+    goalTargetRef.current.copy(target);
+    goalPosRef.current.copy(target).add(offset);
+    animatingRef.current = true;
+  }, [navCommand.id, navCommand.type, camera]);
+
   useFrame((_, delta) => {
     if (!animatingRef.current || !controlsRef.current) return;
-    const alpha = Math.min(1, delta * 5.0);
+    const alpha = Math.min(1, delta * 6.0);
     camera.position.lerp(goalPosRef.current, alpha);
     controlsRef.current.target.lerp(goalTargetRef.current, alpha);
     controlsRef.current.update();
@@ -1052,13 +1083,26 @@ function CameraRig({
       ref={controlsRef}
       makeDefault
       enableDamping
-      dampingFactor={0.08}
+      dampingFactor={0.1}
       enableZoom
       enablePan
       enableRotate
-      minDistance={35}
-      maxDistance={440}
-      maxPolarAngle={Math.PI * 0.485}
+      screenSpacePanning
+      rotateSpeed={0.9}
+      zoomSpeed={1.3}
+      panSpeed={1.25}
+      minDistance={28}
+      maxDistance={460}
+      maxPolarAngle={Math.PI * 0.495}
+      mouseButtons={{
+        LEFT: dragMode === "pan" ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: dragMode === "pan" ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN,
+      }}
+      touches={{
+        ONE: dragMode === "pan" ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN,
+      }}
       onStart={() => {
         animatingRef.current = false;
       }}
@@ -1077,7 +1121,9 @@ export function HologramSceneContent({
   selectedNodeId,
   layerFilter,
   placeUserMode,
+  dragMode,
   cameraRequest,
+  navCommand,
   showLabels,
   onSelectNode,
   onPlaceUser,
@@ -1127,15 +1173,16 @@ export function HologramSceneContent({
 
   return (
     <>
-      <color attach="background" args={["#09090b"]} />
-      <fog attach="fog" args={["#09090b", 310, 640]} />
-      <hemisphereLight args={["#e4e4e7", "#18181b", 0.72]} />
-      <directionalLight position={[110, 190, 130]} intensity={1.15} color="#fff7ed" />
-      <directionalLight position={[-120, 140, -100]} intensity={0.45} color="#dbeafe" />
-      <pointLight position={[0, 85, 0]} intensity={1.0} color="#fef3c7" />
+      <color attach="background" args={["#e2e8f0"]} />
+      <fog attach="fog" args={["#e2e8f0", 380, 760]} />
+      <hemisphereLight args={["#ffffff", "#94a3b8", 1.1]} />
+      <directionalLight position={[120, 220, 140]} intensity={1.35} color="#fffbeb" />
+      <directionalLight position={[-110, 150, -90]} intensity={0.6} color="#e0f2fe" />
 
       <CameraRig
         cameraRequest={cameraRequest}
+        navCommand={navCommand}
+        dragMode={dragMode}
         userPosition={userPosition}
         seatLocation={seatLocation}
       />
@@ -1147,27 +1194,27 @@ export function HologramSceneContent({
         onClick={handleFloorClick}
       >
         <circleGeometry args={[182, 72]} />
-        <meshStandardMaterial color="#111114" roughness={0.9} metalness={0.1} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.9} metalness={0.05} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
         <ringGeometry args={[70, 136, 72]} />
-        <meshStandardMaterial color="#18181b" roughness={0.85} metalness={0.15} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.85} metalness={0.08} />
       </mesh>
-      <Line points={concourseRingPts} color="#3f3f46" lineWidth={1.2} />
-      <Line points={plazaRingPts} color="#27272a" lineWidth={1.4} />
+      <Line points={concourseRingPts} color="#94a3b8" lineWidth={1.2} />
+      <Line points={plazaRingPts} color="#64748b" lineWidth={1.4} />
 
       {/* SubAir Cricket Outfield with Mowed Grass Rings */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.16, 0]}>
         <circleGeometry args={[fieldRadius, 72]} />
-        <meshStandardMaterial color="#14532d" roughness={0.92} />
+        <meshStandardMaterial color="#16a34a" roughness={0.92} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.19, 0]}>
         <circleGeometry args={[48, 64]} />
-        <meshStandardMaterial color="#166534" roughness={0.92} />
+        <meshStandardMaterial color="#15803d" roughness={0.92} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.21, 0]}>
         <circleGeometry args={[27.4, 64]} />
-        <meshStandardMaterial color="#15803d" roughness={0.92} />
+        <meshStandardMaterial color="#22c55e" roughness={0.92} />
       </mesh>
 
       {/* LED Crimson Boundary Advertising Perimeter Ring */}
@@ -1230,12 +1277,12 @@ export function HologramSceneContent({
       {showLabels && spec?.ends && (
         <>
           <Html center distanceFactor={235} position={[0, 4, -52]}>
-            <div className="pointer-events-none whitespace-nowrap rounded bg-zinc-950/85 px-2 py-0.5 text-[9px] font-semibold text-amber-200/90">
+            <div className="pointer-events-none whitespace-nowrap rounded border border-slate-300 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-slate-800 shadow-sm">
               {spec.ends.north_end}
             </div>
           </Html>
           <Html center distanceFactor={235} position={[0, 4, 52]}>
-            <div className="pointer-events-none whitespace-nowrap rounded bg-zinc-950/85 px-2 py-0.5 text-[9px] font-semibold text-amber-200/90">
+            <div className="pointer-events-none whitespace-nowrap rounded border border-slate-300 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-slate-800 shadow-sm">
               {spec.ends.south_end}
             </div>
           </Html>
@@ -1247,7 +1294,7 @@ export function HologramSceneContent({
           const [rx, , rz] = toThree(road.label_x, road.label_y, 0);
           return (
             <Html key={road.name} center distanceFactor={265} position={[rx, 2.5, rz]}>
-              <div className="pointer-events-none whitespace-nowrap rounded border border-zinc-700/80 bg-zinc-950/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-300">
+              <div className="pointer-events-none whitespace-nowrap rounded border border-slate-300 bg-white/95 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-slate-700 shadow-sm">
                 {road.name}
               </div>
             </Html>

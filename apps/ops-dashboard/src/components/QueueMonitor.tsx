@@ -31,7 +31,7 @@ const QUEUE_TYPES = new Set<NodeType>(["gate", "concession", "restroom"]);
 function TrendPill({ trend }: { trend?: NodeTelemetry["trend"] }) {
   if (trend === "rising") {
     return (
-      <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[11px] font-medium text-red-300">
+      <span className="inline-flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
         <ArrowUpRight className="h-3 w-3" />
         Rising
       </span>
@@ -39,14 +39,14 @@ function TrendPill({ trend }: { trend?: NodeTelemetry["trend"] }) {
   }
   if (trend === "falling") {
     return (
-      <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300">
+      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">
         <ArrowDownRight className="h-3 w-3" />
         Falling
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded bg-zinc-700/40 px-1.5 py-0.5 text-[11px] font-medium text-zinc-300">
+    <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
       <ArrowRight className="h-3 w-3" />
       Stable
     </span>
@@ -76,24 +76,24 @@ export function QueueMonitor({
   }, [topology.nodes, telemetry.nodes, category]);
 
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/90 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-teal-400" />
-          <h2 className="text-sm font-semibold text-white">
+          <Clock className="h-4 w-4 text-slate-600" />
+          <h2 className="text-sm font-semibold text-slate-900">
             Gate &amp; Concession Queue Monitor
           </h2>
         </div>
-        <div className="flex rounded-lg border border-zinc-800 bg-zinc-950 p-0.5 text-xs">
+        <div className="flex rounded-md border border-slate-200 bg-slate-100 p-0.5 text-xs">
           {CATEGORY_TABS.map((tab) => (
             <button
               key={tab.value}
               type="button"
               onClick={() => setCategory(tab.value)}
-              className={`rounded-md px-2.5 py-1 font-medium transition ${
+              className={`rounded px-2.5 py-1 font-medium transition ${
                 category === tab.value
-                  ? "bg-teal-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-100"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               {tab.label}
@@ -104,7 +104,7 @@ export function QueueMonitor({
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] text-left text-xs">
-          <thead className="border-b border-zinc-800 text-[11px] uppercase tracking-wider text-zinc-400">
+          <thead className="border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
             <tr>
               <th className="py-2 pr-3">Zone</th>
               <th className="py-2 pr-3">Status</th>
@@ -114,7 +114,7 @@ export function QueueMonitor({
               <th className="py-2">Trend</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/70">
+          <tbody className="divide-y divide-slate-200">
             {rows.map(({ meta, telemetry: t }) => {
               if (!meta) return null;
               const visuals = getCongestionVisuals(t.status);
@@ -126,34 +126,34 @@ export function QueueMonitor({
                 <tr
                   key={meta.id}
                   onClick={() => onSelectNode(meta.id)}
-                  className={`cursor-pointer transition hover:bg-zinc-800/40 ${
+                  className={`cursor-pointer transition hover:bg-slate-50 ${
                     isSelected
-                      ? "bg-teal-500/15"
+                      ? "bg-blue-50"
                       : isBottleneck
-                        ? "bg-red-500/[0.04]"
+                        ? "bg-red-50/40"
                         : ""
                   }`}
                 >
                   <td className="py-2.5 pr-3">
-                    <div className="font-medium text-white">{meta.name}</div>
-                    <div className="text-[11px] text-zinc-400">
+                    <div className="font-medium text-slate-900">{meta.name}</div>
+                    <div className="text-[11px] text-slate-500">
                       L{meta.level} · {meta.type} · {t.occupancy}/{t.capacity}
                     </div>
                   </td>
                   <td className="py-2.5 pr-3">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${visuals.bgClass} ${visuals.textClass} ${visuals.borderClass}`}
+                      className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium ${visuals.bgClass} ${visuals.textClass} ${visuals.borderClass}`}
                     >
                       {Math.round(t.congestion_score * 100)}% {visuals.label}
                     </span>
                   </td>
-                  <td className="py-2.5 pr-3 font-medium text-zinc-200">
+                  <td className="py-2.5 pr-3 font-medium text-slate-700">
                     {t.queue_length} fans
                   </td>
-                  <td className="py-2.5 pr-3 font-semibold text-white">
+                  <td className="py-2.5 pr-3 font-semibold text-slate-900">
                     {t.estimated_wait_min} min
                   </td>
-                  <td className="py-2.5 pr-3 text-zinc-300">
+                  <td className="py-2.5 pr-3 text-slate-600">
                     {t.flow_rate_per_min}/min
                   </td>
                   <td className="py-2.5">

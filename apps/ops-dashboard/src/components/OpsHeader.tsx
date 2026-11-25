@@ -61,50 +61,50 @@ export function OpsHeader({
     if (connectionStatus === "live") {
       return {
         label: "WS Live",
-        cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+        cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
         icon: <Wifi className="h-3.5 w-3.5" />,
       };
     }
     if (connectionStatus === "simulation") {
       return {
         label: "Sim Stream",
-        cls: "bg-teal-500/15 text-teal-300 border-teal-500/40",
+        cls: "bg-blue-50 text-blue-700 border-blue-200",
         icon: <Radio className="h-3.5 w-3.5" />,
       };
     }
     if (connectionStatus === "connecting") {
       return {
         label: "Connecting",
-        cls: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+        cls: "bg-amber-50 text-amber-700 border-amber-200",
         icon: <Activity className="h-3.5 w-3.5 animate-pulse" />,
       };
     }
     return {
       label: "Offline",
-      cls: "bg-red-500/15 text-red-300 border-red-500/40",
+      cls: "bg-red-50 text-red-700 border-red-200",
       icon: <WifiOff className="h-3.5 w-3.5" />,
     };
   })();
 
   return (
-    <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-md">
+    <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-800">
             <Activity className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold tracking-tight text-white sm:text-lg">
-                D.I.S.H.A. Operations Command
+              <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+                D.I.S.H.A. Operations
               </h1>
-              <span className="rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2.5 py-0.5 text-xs font-medium text-cyan-300">
+              <span className="rounded border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
                 {formatEventPhase(telemetry.event_phase)}
               </span>
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-slate-500">
               {venueName} · Venue ID:{" "}
-              <span className="font-mono text-zinc-300">
+              <span className="font-mono text-slate-700">
                 {telemetry.venue_id}
               </span>
             </p>
@@ -112,36 +112,36 @@ export function OpsHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/90 px-3 py-1.5 text-xs">
-            <div className="flex items-center gap-1.5 text-zinc-300">
-              <Users className="h-3.5 w-3.5 text-teal-400" />
-              <span className="text-zinc-400">Est. Crowd:</span>
-              <span className="font-semibold text-white">
+          <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-slate-700">
+              <Users className="h-3.5 w-3.5 text-slate-500" />
+              <span className="text-slate-500">Est. Crowd:</span>
+              <span className="font-semibold text-slate-900">
                 {(telemetry.total_attendance_estimate ?? 0).toLocaleString()}
               </span>
             </div>
-            <span className="h-3.5 w-px bg-zinc-800" />
+            <span className="h-3.5 w-px bg-slate-200" />
             <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
-              <span className="text-zinc-400">Hotspots:</span>
-              <span className="font-semibold text-orange-300">
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-600" />
+              <span className="text-slate-500">Hotspots:</span>
+              <span className="font-semibold text-orange-700">
                 {criticalCount}
               </span>
             </div>
-            <span className="h-3.5 w-px bg-zinc-800" />
+            <span className="h-3.5 w-px bg-slate-200" />
             <div>
-              <span className="text-zinc-400">Active Alerts: </span>
-              <span className="font-semibold text-red-300">{openAlerts}</span>
+              <span className="text-slate-500">Active Alerts: </span>
+              <span className="font-semibold text-red-700">{openAlerts}</span>
             </div>
-            <span className="hidden h-3.5 w-px bg-zinc-800 md:inline-block" />
+            <span className="hidden h-3.5 w-px bg-slate-200 md:inline-block" />
             <div className="hidden md:block">
-              <span className="text-zinc-400">Avg Wait: </span>
-              <span className="font-semibold text-zinc-100">{avgWait}m</span>
+              <span className="text-slate-500">Avg Wait: </span>
+              <span className="font-semibold text-slate-900">{avgWait}m</span>
             </div>
           </div>
 
           <div
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${statusBadge.cls}`}
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium ${statusBadge.cls}`}
           >
             {statusBadge.icon}
             <span>{statusBadge.label}</span>
@@ -150,16 +150,16 @@ export function OpsHeader({
             </span>
           </div>
 
-          <div className="flex rounded-lg border border-zinc-800 bg-zinc-900 p-0.5 text-xs">
+          <div className="flex rounded-md border border-slate-200 bg-slate-100 p-0.5 text-xs">
             {MODE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => onModeChange(opt.value)}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded px-2.5 py-1 font-medium transition ${
                   mode === opt.value
-                    ? "bg-teal-600 text-white"
-                    : "text-zinc-400 hover:text-zinc-100"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {opt.label}
@@ -171,7 +171,7 @@ export function OpsHeader({
             type="button"
             onClick={onRefresh}
             title="Reconnect / Refresh Telemetry"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>

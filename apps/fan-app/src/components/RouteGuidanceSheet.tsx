@@ -35,7 +35,7 @@ export function RouteGuidanceSheet({
 
   if (!guidance) {
     return (
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 text-center text-xs text-zinc-400">
+      <section className="rounded-lg border border-slate-200 bg-white p-5 text-center text-xs text-slate-500 shadow-sm">
         Computing optimal stadium route...
       </section>
     );
@@ -48,17 +48,17 @@ export function RouteGuidanceSheet({
   return (
     <div className="space-y-4">
       {/* Recommendation Summary Card */}
-      <section className="rounded-2xl border border-emerald-500/35 bg-gradient-to-br from-emerald-500/15 via-zinc-900 to-zinc-900 p-4">
+      <section className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
               Recommended Destination
             </span>
-            <h2 className="mt-0.5 text-lg font-bold text-white">{destName}</h2>
+            <h2 className="mt-0.5 text-lg font-bold text-slate-900">{destName}</h2>
           </div>
 
           {guidance.time_saved_min > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-zinc-950 shadow">
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">
               <Sparkles className="h-3.5 w-3.5" />
               Saves {guidance.time_saved_min} min
             </span>
@@ -66,32 +66,32 @@ export function RouteGuidanceSheet({
         </div>
 
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-2.5">
-            <div className="text-[11px] text-zinc-400">Total Time</div>
-            <div className="mt-0.5 text-base font-bold text-white">
+          <div className="rounded-md border border-slate-200 bg-white p-2.5">
+            <div className="text-[11px] text-slate-500">Total Time</div>
+            <div className="mt-0.5 text-base font-bold text-slate-900">
               {guidance.estimated_total_min}m
             </div>
           </div>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-2.5">
-            <div className="flex items-center justify-center gap-1 text-[11px] text-zinc-400">
+          <div className="rounded-md border border-slate-200 bg-white p-2.5">
+            <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
               <Footprints className="h-3 w-3" /> Walk
             </div>
-            <div className="mt-0.5 text-base font-bold text-zinc-200">
+            <div className="mt-0.5 text-base font-bold text-slate-800">
               {guidance.estimated_walk_min}m
             </div>
           </div>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-2.5">
-            <div className="flex items-center justify-center gap-1 text-[11px] text-zinc-400">
+          <div className="rounded-md border border-slate-200 bg-white p-2.5">
+            <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
               <Clock className="h-3 w-3" /> Est. Wait
             </div>
-            <div className="mt-0.5 text-base font-bold text-emerald-300">
+            <div className="mt-0.5 text-base font-bold text-emerald-700">
               {guidance.estimated_wait_min}m
             </div>
           </div>
         </div>
 
         {guidance.accessible_only && (
-          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-200">
+          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700">
             <Accessibility className="h-3.5 w-3.5" />
             Step-free elevator &amp; ramp route verified
           </div>
@@ -99,23 +99,23 @@ export function RouteGuidanceSheet({
       </section>
 
       {/* Turn-by-Turn Steps */}
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-white">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold text-slate-900">
           Step-by-Step Directions ({guidance.steps.length} steps)
         </h3>
-        <ol className="space-y-2.5">
+        <ol className="space-y-2">
           {guidance.steps.map((step) => (
             <li
               key={`${step.order}-${step.node_id}`}
-              className="flex items-start gap-3 rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-2.5 text-xs"
+              className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-2.5 text-xs"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500/20 font-bold text-rose-300">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white">
                 {step.order}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-zinc-100">{step.instruction}</p>
+                <p className="font-medium text-slate-900">{step.instruction}</p>
                 {step.distance_m > 0 && (
-                  <p className="mt-0.5 text-[11px] text-zinc-400">
+                  <p className="mt-0.5 text-[11px] text-slate-500">
                     Walk ~{step.distance_m} m
                   </p>
                 )}
@@ -127,8 +127,8 @@ export function RouteGuidanceSheet({
 
       {/* Ranked Alternatives */}
       {guidance.alternatives.length > 0 && (
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4">
-          <h3 className="mb-2.5 text-sm font-semibold text-white">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="mb-2.5 text-sm font-semibold text-slate-900">
             Other Nearby Options (Tap to Switch)
           </h3>
           <div className="space-y-2">
@@ -141,21 +141,21 @@ export function RouteGuidanceSheet({
                   key={alt.node_id}
                   type="button"
                   onClick={() => onSelectAlternative(alt.node_id)}
-                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-950/75 px-3 py-2.5 text-left text-xs transition hover:border-zinc-700"
+                  className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-xs transition hover:border-slate-300 hover:bg-slate-100"
                 >
                   <div>
-                    <div className="font-semibold text-white">{alt.name}</div>
-                    <div className="mt-0.5 text-[11px] text-zinc-400">
+                    <div className="font-semibold text-slate-900">{alt.name}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">
                       Est. wait: {alt.estimated_wait_min} min
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${visuals.bgClass} ${visuals.textClass} ${visuals.borderClass}`}
+                      className={`rounded border px-2 py-0.5 text-[10px] font-medium ${visuals.bgClass} ${visuals.textClass} ${visuals.borderClass}`}
                     >
                       {Math.round(alt.congestion_score * 100)}% {visuals.label}
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 text-zinc-400" />
+                    <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
                   </div>
                 </button>
               );

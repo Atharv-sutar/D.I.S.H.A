@@ -32,33 +32,33 @@ export function FanHeader({
   lastUpdatedAt,
 }: FanHeaderProps) {
   return (
-    <header className="sticky top-0 z-20 border-b border-zinc-800/90 bg-zinc-950/90 backdrop-blur-md">
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2.5 px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-600/30 to-amber-500/20 text-amber-300 ring-1 ring-rose-500/45">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-800">
             <Compass className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold tracking-tight text-white sm:text-base">
+              <h1 className="text-sm font-bold tracking-tight text-slate-900 sm:text-base">
                 D.I.S.H.A. Fan Guide
               </h1>
-              <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+              <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                 {formatEventPhase(eventPhase)}
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400">{venueName}</p>
+            <p className="text-[11px] text-slate-500">{venueName}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+            className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium ${
               connectionStatus === "live"
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                 : connectionStatus === "simulation"
-                  ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                  : "border-zinc-700 bg-zinc-900 text-zinc-300"
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-slate-100 text-slate-600"
             }`}
           >
             {connectionStatus === "live" ? (
@@ -80,16 +80,16 @@ export function FanHeader({
             </span>
           </span>
 
-          <div className="flex rounded-lg border border-zinc-800 bg-zinc-900 p-0.5 text-[11px]">
+          <div className="flex rounded-md border border-slate-200 bg-slate-100 p-0.5 text-[11px]">
             {MODES.map((m) => (
               <button
                 key={m.value}
                 type="button"
                 onClick={() => onModeChange(m.value)}
-                className={`rounded-md px-2.5 py-0.5 font-medium transition ${
+                className={`rounded px-2.5 py-0.5 font-medium transition ${
                   mode === m.value
-                    ? "bg-rose-600 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-100"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {m.label}

@@ -19,37 +19,37 @@ const STATUS_VISUALS: Record<CongestionLevel, CongestionVisuals> = {
   optimal: {
     label: "Optimal",
     hex: "#10b981",
-    bgClass: "bg-emerald-500/15",
-    textClass: "text-emerald-300",
-    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-50",
+    textClass: "text-emerald-700",
+    borderClass: "border-emerald-200",
   },
   moderate: {
     label: "Moderate",
     hex: "#f59e0b",
-    bgClass: "bg-amber-500/15",
-    textClass: "text-amber-300",
-    borderClass: "border-amber-500/40",
+    bgClass: "bg-amber-50",
+    textClass: "text-amber-700",
+    borderClass: "border-amber-200",
   },
   high: {
     label: "High",
     hex: "#f97316",
-    bgClass: "bg-orange-500/15",
-    textClass: "text-orange-300",
-    borderClass: "border-orange-500/40",
+    bgClass: "bg-orange-50",
+    textClass: "text-orange-700",
+    borderClass: "border-orange-200",
   },
   critical: {
     label: "Critical",
     hex: "#ef4444",
-    bgClass: "bg-red-500/20",
-    textClass: "text-red-300",
-    borderClass: "border-red-500/50",
+    bgClass: "bg-red-50",
+    textClass: "text-red-700",
+    borderClass: "border-red-200",
   },
   closed: {
     label: "Closed",
     hex: "#71717a",
-    bgClass: "bg-zinc-600/20",
-    textClass: "text-zinc-300",
-    borderClass: "border-zinc-500/40",
+    bgClass: "bg-slate-100",
+    textClass: "text-slate-700",
+    borderClass: "border-slate-300",
   },
 };
 
@@ -69,26 +69,26 @@ export function scoreToCongestionLevel(score: number): CongestionLevel {
 export function getSeverityBadgeClass(severity: IncidentSeverity): string {
   switch (severity) {
     case "critical":
-      return "bg-red-500/20 text-red-300 border-red-500/50";
+      return "bg-red-50 text-red-700 border-red-200";
     case "high":
-      return "bg-orange-500/20 text-orange-300 border-orange-500/50";
+      return "bg-orange-50 text-orange-700 border-orange-200";
     case "medium":
-      return "bg-amber-500/20 text-amber-300 border-amber-500/40";
+      return "bg-amber-50 text-amber-700 border-amber-200";
     case "low":
-      return "bg-sky-500/20 text-sky-300 border-sky-500/40";
+      return "bg-sky-50 text-sky-700 border-sky-200";
   }
 }
 
 export function getIncidentStatusClass(status: IncidentStatus): string {
   switch (status) {
     case "open":
-      return "bg-red-500/15 text-red-300 border-red-500/40";
+      return "bg-red-50 text-red-700 border-red-200";
     case "acknowledged":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/40";
+      return "bg-amber-50 text-amber-700 border-amber-200";
     case "dispatched":
-      return "bg-teal-500/15 text-teal-300 border-teal-500/40";
+      return "bg-blue-50 text-blue-700 border-blue-200";
     case "resolved":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
   }
 }
 

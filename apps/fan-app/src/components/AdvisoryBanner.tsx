@@ -23,29 +23,29 @@ export function AdvisoryBanner({
 
   return (
     <section
-      className={`rounded-2xl border p-3.5 transition ${
+      className={`rounded-lg border p-3.5 transition ${
         isWarning
-          ? "border-rose-500/40 bg-rose-500/10"
-          : "border-amber-500/35 bg-amber-500/10"
+          ? "border-amber-300 bg-amber-50"
+          : "border-blue-200 bg-blue-50"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
           <Bell
             className={`mt-0.5 h-4 w-4 shrink-0 ${
-              isWarning ? "text-rose-300" : "text-amber-300"
+              isWarning ? "text-amber-600" : "text-blue-600"
             }`}
           />
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-white">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-900">
                 {latest.title}
               </span>
-              <span className="text-[11px] text-zinc-300/80">
+              <span className="text-[11px] text-slate-500">
                 {formatRelativeSeconds(latest.timestamp)}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-zinc-200">{latest.message}</p>
+            <p className="mt-0.5 text-xs text-slate-700">{latest.message}</p>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export function AdvisoryBanner({
             <button
               type="button"
               onClick={() => onQuickRouteNode(latest.recommended_node_id!)}
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-emerald-500"
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-emerald-700"
             >
               <Navigation className="h-3 w-3" />
               Go Here
@@ -65,7 +65,7 @@ export function AdvisoryBanner({
               type="button"
               onClick={() => setExpanded((v) => !v)}
               aria-label="Toggle live advisories"
-              className="rounded-lg border border-zinc-700/70 bg-zinc-900/70 p-1.5 text-zinc-300 hover:text-white"
+              className="rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:text-slate-900"
             >
               {expanded ? (
                 <ChevronUp className="h-3.5 w-3.5" />
@@ -78,17 +78,17 @@ export function AdvisoryBanner({
       </div>
 
       {expanded && advisories.length > 1 && (
-        <div className="mt-3 space-y-2 border-t border-zinc-700/50 pt-2.5">
+        <div className="mt-3 space-y-2 border-t border-slate-200 pt-2.5">
           {advisories.slice(1, 5).map((adv) => (
             <div
               key={`${adv.advisory_id}-${adv.timestamp}`}
-              className="flex items-center justify-between gap-2 text-xs text-zinc-300"
+              className="flex items-center justify-between gap-2 text-xs text-slate-700"
             >
               <div>
-                <span className="font-medium text-white">{adv.title}: </span>
+                <span className="font-semibold text-slate-900">{adv.title}: </span>
                 <span>{adv.message}</span>
               </div>
-              <span className="shrink-0 text-[10px] text-zinc-400">
+              <span className="shrink-0 text-[10px] text-slate-500">
                 {formatRelativeSeconds(adv.timestamp)}
               </span>
             </div>

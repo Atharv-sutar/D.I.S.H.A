@@ -17,8 +17,8 @@ const StadiumHologram3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[520px] items-center justify-center rounded-2xl border border-teal-500/30 bg-[#09090b] text-xs font-medium text-teal-300">
-        Initializing M. Chinnaswamy 3D Operations Digital Twin...
+      <div className="flex h-[520px] items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-xs font-medium text-slate-600">
+        Loading M. Chinnaswamy 3D Operations Map...
       </div>
     ),
   }
@@ -49,7 +49,7 @@ export default function OpsDashboardPage() {
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <OpsHeader
         venueName={topology.venue_name}
         telemetry={telemetry}
@@ -65,32 +65,32 @@ export default function OpsDashboardPage() {
       <main className="mx-auto grid max-w-[1600px] gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-slate-600">
               Live M. Chinnaswamy Stadium Operations View • Tracked Fans:{" "}
-              <span className="font-semibold text-teal-300">
+              <span className="font-semibold text-slate-900">
                 {activeFans.length}
               </span>
             </p>
-            <div className="inline-flex rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-xs">
+            <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setViewMode("3d")}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
+                className={`inline-flex items-center gap-1.5 rounded px-3 py-1 font-medium transition ${
                   viewMode === "3d"
-                    ? "bg-teal-500/20 text-teal-200 ring-1 ring-teal-400/50"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Box className="h-3.5 w-3.5" />
-                <span>3D Stadium</span>
+                <span>3D Map</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("2d")}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition ${
+                className={`inline-flex items-center gap-1.5 rounded px-3 py-1 font-medium transition ${
                   viewMode === "2d"
-                    ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Layers className="h-3.5 w-3.5" />
@@ -107,7 +107,7 @@ export default function OpsDashboardPage() {
               activeFans={activeFans}
               selectedNodeId={selectedNodeId}
               heightClassName="h-[460px] sm:h-[540px]"
-              title="M. Chinnaswamy Stadium • 3D Operations Hologram"
+              title="M. Chinnaswamy Stadium • Operations 3D Map"
               onSelectNode={setSelectedNodeId}
             />
           ) : (
