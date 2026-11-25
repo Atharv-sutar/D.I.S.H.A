@@ -13,7 +13,7 @@
 - **3D Stadium Hologram (`apps/`, one-time user override)**:
   - Installed `three`, `@types/three`, `@react-three/fiber@^8.17.10`, `@react-three/drei@^9.117.3` in `apps/ops-dashboard/` and `apps/fan-app/`.
   - Upgraded `apps/shared/` (`contracts.ts`, `ws.ts`, `apiClient.ts`, `stadiumData.ts`, `simulator.ts`, `congestion.ts`, `useFanStream.ts`, `useOpsStream.ts`) to `chinnaswamy_bengaluru`.
-  - Built interactive 3D M. Chinnaswamy Stadium Hologram (`apps/shared/components/StadiumHologram3D.tsx` & `apps/shared/components/hologram/HologramSceneContent.tsx`) with orbit/zoom/pan controls, explicit `Reset View` camera button (no auto-reset on telemetry ticks), seat ticket parser & 3D seat beacon (`apps/shared/lib/seatMapper.ts`), and simulated 3D walking along `waypoints_3d` (`apps/shared/hooks/useWalkSimulator.ts`) that locks the user's current position to their seat upon arrival.
+  - Overhauled 3D M. Chinnaswamy Stadium model (`HologramSceneContent.tsx`, `StadiumHologram3D.tsx`): replaced raw neon cylinders with realistic outfield/pitch/stand architecture, architectural Gate Portals (`GatePortalMarker`), clean Facility Pods (`FacilityPodMarker`), `Gates Only` / `Full Stadium` / `Food / WC / Aid` / `Route Focus` layer tabs, 1-click `Best Exit (Low Crowd)` button, any-node origin picker, seat ticket 3D marker, and smooth walk simulator (`typecheck`, `lint`, and `build` passing across all 3 apps).
   - Integrated into `apps/fan-app` and `apps/ops-dashboard` (`typecheck`, `lint`, `build` passing on both).
 
 - **Unified Single-Command Launcher & 3-App Suite**:

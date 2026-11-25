@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ElementRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -22,17 +22,15 @@ import { getCongestionVisuals } from "../../lib/congestion";
 
 export type HologramLayerFilter =
   | "all"
-  | "congestion"
-  | "exits"
-  | "waypoints"
-  | "amenities";
+  | "gates_only"
+  | "amenities"
+  | "route_only";
 
 export type CameraPreset =
   | "aerial"
   | "follow_me"
   | "top_down"
-  | "pitch_view"
-  | "exits";
+  | "pitch_view";
 
 export interface CameraTargetSpec {
   id: number;
@@ -60,7 +58,11 @@ export function toThree(x: number, y: number, z = 0): [number, number, number] {
   return [x, z, -y];
 }
 
-function buildRingPoints(radius: number, yHeight: number, segments = 96): [number, number, number][] {
+function buildRingPoints(
+  radius: number,
+  yHeight: number,
+  segments = 96
+): [number, number, number][] {
   const pts: [number, number, number][] = [];
   for (let i = 0; i <= segments; i++) {
     const a = (i / segments) * Math.PI * 2;
@@ -73,8 +75,8 @@ function createStandSectorGeometry(sector: StandSector): THREE.ExtrudeGeometry {
   const startRad = (sector.start_deg * Math.PI) / 180;
   const endRad = (sector.end_deg * Math.PI) / 180;
   const shape = new THREE.Shape();
+  const segments = 32;
 
-  const segments = 28;
   shape.moveTo(
     Math.cos(startRad) * sector.inner_radius_m,
     Math.sin(startRad) * sector.inner_radius_m
@@ -95,37 +97,34 @@ function createStandSectorGeometry(sector: StandSector): THREE.ExtrudeGeometry {
   }
   shape.closePath();
 
-  const geom = new THREE.ExtrudeGeometry(shape, {
+  return new THREE.ExtrudeGeometry(shape, {
     depth: sector.height_m,
-    bevelEnabled: false,
-    curveSegments: 24,
+    bevelEnabled: true,
+    bevelThickness: 0.45,
+    bevelSize: 0.45,
+    bevelSegments: 2,
+    curveSegments: 28,
   });
-  return geom;
 }
 
-function sectorColor(score: number): string {
-  if (score >= 0.8) return "#ef4444";
-  if (score >= 0.6) return "#f97316";
-  if (score >= 0.35) return "#f59e0b";
-  return "#06b6d4";
-}
-
-function StandSectorMesh({
+function StandTierBlock({
   sector,
   congestionScore,
   isSelected,
-  dimmed,
+  isGatesOnly,
   onSelect,
 }: {
   sector: StandSector;
   congestionScore: number;
   isSelected: boolean;
-  dimmed: boolean;
+  isGatesOnly: boolean;
   onSelect?: (nodeId: string) => void;
 }) {
+  const [hovered, setHovered] = useState(false);
+
   const { extrudeGeom, edgesGeom } = useMemo(() => {
     const g = createStandSectorGeometry(sector);
-    const e = new THREE.EdgesGeometry(g, 22);
+    const e = new THREE.EdgesGeometry(g, 24);
     return { extrudeGeom: g, edgesGeom: e };
   }, [sector]);
 
@@ -136,54 +135,64 @@ function StandSectorMesh({
     };
   }, [extrudeGeom, edgesGeom]);
 
-  const fillMatRef = useRef<THREE.MeshStandardMaterial>(null);
-  const color = sectorColor(congestionScore);
+  // Subtle, refined architectural tinting instead of harsh neon blocks
+  const tint =
+    congestionScore >= 0.8
+      ? "#ef4444"
+      : congestionScore >= 0.6
+        ? "#f97316"
+        : congestionScore >= 0.35
+          ? "#eab308"
+          : "#0ea5e9";
 
-  useFrame(({ clock }) => {
-    if (!fillMatRef.current) return;
-    if (congestionScore >= 0.72) {
-      const pulse = 0.22 + 0.14 * Math.sin(clock.getElapsedTime() * 4.2);
-      fillMatRef.current.opacity = dimmed ? 0.08 : pulse;
-    } else {
-      fillMatRef.current.opacity = dimmed ? 0.07 : isSelected ? 0.32 : 0.16;
-    }
-  });
+  const baseOpacity = isGatesOnly
+    ? 0.08
+    : isSelected || hovered
+      ? 0.46
+      : 0.24;
 
   return (
-    <group
-      position={[0, sector.elevation_m, 0]}
-      rotation={[-Math.PI / 2, 0, 0]}
-    >
+    <group position={[0, sector.elevation_m, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <mesh
         geometry={extrudeGeom}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "auto";
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onSelect?.(sector.linked_node_id);
         }}
       >
         <meshStandardMaterial
-          ref={fillMatRef}
-          color={color}
-          emissive={color}
-          emissiveIntensity={isSelected ? 0.9 : 0.45}
+          color={tint}
+          emissive={tint}
+          emissiveIntensity={isSelected || hovered ? 0.55 : 0.18}
+          roughness={0.45}
+          metalness={0.35}
           transparent
-          opacity={dimmed ? 0.07 : 0.18}
+          opacity={baseOpacity}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
       </mesh>
       <lineSegments geometry={edgesGeom}>
         <lineBasicMaterial
-          color={isSelected ? "#ffffff" : color}
+          color={isSelected || hovered ? "#e0f2fe" : tint}
           transparent
-          opacity={dimmed ? 0.2 : 0.72}
+          opacity={isGatesOnly ? 0.16 : isSelected || hovered ? 0.85 : 0.42}
         />
       </lineSegments>
     </group>
   );
 }
 
-function FloodlightTowerMesh({
+function FloodlightTower({
   x,
   y,
   heightM,
@@ -193,22 +202,230 @@ function FloodlightTowerMesh({
   heightM: number;
 }) {
   const [tx, , tz] = toThree(x, y, 0);
+  const angleToCenter = Math.atan2(-tx, -tz);
+
   return (
-    <group position={[tx, 0, tz]}>
+    <group position={[tx, 0, tz]} rotation={[0, angleToCenter, 0]}>
       <mesh position={[0, heightM / 2, 0]}>
-        <cylinderGeometry args={[0.9, 2.2, heightM, 6, 1, true]} />
-        <meshBasicMaterial color="#38bdf8" wireframe transparent opacity={0.55} />
-      </mesh>
-      <mesh position={[0, heightM + 1.5, 0]}>
-        <boxGeometry args={[9, 4.2, 2.2]} />
+        <cylinderGeometry args={[0.7, 1.8, heightM, 8]} />
         <meshStandardMaterial
-          color="#bae6fd"
-          emissive="#38bdf8"
-          emissiveIntensity={1.6}
-          transparent
-          opacity={0.75}
+          color="#1e293b"
+          metalness={0.7}
+          roughness={0.35}
         />
       </mesh>
+      <mesh position={[0, heightM + 1.8, 0.8]}>
+        <boxGeometry args={[10, 4.4, 1.2]} />
+        <meshStandardMaterial
+          color="#e0f2fe"
+          emissive="#7dd3fc"
+          emissiveIntensity={1.25}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function GatePortalMarker({
+  node,
+  telemetry,
+  isSelected,
+  isOnRoute,
+  showLabel,
+  onSelect,
+}: {
+  node: StadiumNode;
+  telemetry?: NodeTelemetry;
+  isSelected: boolean;
+  isOnRoute: boolean;
+  showLabel: boolean;
+  onSelect?: (nodeId: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [nx, ny, nz] = toThree(node.x, node.y, node.z ?? 0);
+  const score = telemetry?.congestion_score ?? 0.3;
+  const visuals = getCongestionVisuals(telemetry?.status ?? "optimal");
+  const isExitCapable =
+    node.gate_role === "exit" || node.gate_role === "entry_exit";
+  const gateColor = isSelected ? "#ffffff" : visuals.hex;
+  const angleToCenter = Math.atan2(-nx, -nz);
+
+  return (
+    <group position={[nx, ny, nz]} rotation={[0, angleToCenter, 0]}>
+      {/* Ground entry/exit pad */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.25, 0]}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "auto";
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <circleGeometry args={[5.5, 24]} />
+        <meshStandardMaterial
+          color={visuals.hex}
+          emissive={visuals.hex}
+          emissiveIntensity={isSelected || hovered ? 1.1 : 0.45}
+          transparent
+          opacity={0.4}
+        />
+      </mesh>
+
+      {/* Architectural Gate Archway */}
+      <mesh
+        position={[0, 3.2, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <torusGeometry args={[4.6, 0.55, 10, 24, Math.PI]} />
+        <meshStandardMaterial
+          color={gateColor}
+          emissive={isExitCapable ? "#10b981" : visuals.hex}
+          emissiveIntensity={isSelected || hovered || isOnRoute ? 1.4 : 0.75}
+        />
+      </mesh>
+
+      {/* Left & Right Gate Pillars */}
+      <mesh position={[-4.6, 1.6, 0]}>
+        <cylinderGeometry args={[0.45, 0.55, 3.2, 10]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.5} roughness={0.3} />
+      </mesh>
+      <mesh position={[4.6, 1.6, 0]}>
+        <cylinderGeometry args={[0.45, 0.55, 3.2, 10]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.5} roughness={0.3} />
+      </mesh>
+
+      {showLabel && (
+        <Html center distanceFactor={210} position={[0, 9.5, 0]}>
+          <div
+            className={`pointer-events-none whitespace-nowrap rounded-lg border px-2 py-0.5 text-[10px] font-semibold shadow-lg backdrop-blur ${
+              isSelected
+                ? "border-white bg-slate-900/95 text-white"
+                : score >= 0.7
+                  ? "border-red-400/80 bg-red-950/90 text-red-100"
+                  : isExitCapable
+                    ? "border-emerald-400/75 bg-slate-950/90 text-emerald-200"
+                    : "border-cyan-400/60 bg-slate-950/90 text-cyan-100"
+            }`}
+          >
+            {node.stand_code ?? node.name.split(" (")[0]}
+            {isExitCapable ? " • EXIT" : " • ENTRY"}
+            {telemetry ? ` (${telemetry.estimated_wait_min}m)` : ""}
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function FacilityPodMarker({
+  node,
+  telemetry,
+  isSelected,
+  isOnRoute,
+  showLabel,
+  onSelect,
+}: {
+  node: StadiumNode;
+  telemetry?: NodeTelemetry;
+  isSelected: boolean;
+  isOnRoute: boolean;
+  showLabel: boolean;
+  onSelect?: (nodeId: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [nx, ny, nz] = toThree(node.x, node.y, node.z ?? 0);
+  const visuals = getCongestionVisuals(telemetry?.status ?? "optimal");
+
+  const accent =
+    node.type === "medical"
+      ? "#f43f5e"
+      : node.type === "transit"
+        ? "#38bdf8"
+        : node.type === "restroom"
+          ? "#60a5fa"
+          : node.type === "concession"
+            ? "#fb923c"
+            : visuals.hex;
+
+  const badgeTag =
+    node.type === "concession"
+      ? "FOOD"
+      : node.type === "restroom"
+        ? "WC"
+        : node.type === "medical"
+          ? "FIRST AID"
+          : node.type === "transit"
+            ? "METRO"
+            : node.type === "seating_section"
+              ? "STAND"
+              : "ZONE";
+
+  return (
+    <group position={[nx, ny, nz]}>
+      {/* Ground disc */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.28, 0]}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "auto";
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <ringGeometry args={[2.1, 3.8, 24]} />
+        <meshBasicMaterial
+          color={isSelected || hovered ? "#ffffff" : visuals.hex}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Compact Glowing Node Core */}
+      <mesh
+        position={[0, 1.6, 0]}
+        scale={isSelected || hovered ? 1.25 : 1}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <cylinderGeometry args={[1.6, 2.0, 2.2, 16]} />
+        <meshStandardMaterial
+          color={accent}
+          emissive={visuals.hex}
+          emissiveIntensity={isSelected || hovered || isOnRoute ? 1.2 : 0.45}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {showLabel && (isSelected || hovered || node.type === "transit" || isOnRoute) && (
+        <Html center distanceFactor={215} position={[0, 5.2, 0]}>
+          <div className="pointer-events-none whitespace-nowrap rounded-md border border-slate-600/80 bg-slate-950/90 px-2 py-0.5 text-[9px] font-semibold text-slate-100 shadow">
+            <span className="mr-1 text-cyan-300">{badgeTag}</span>
+            {node.stand_code ?? node.name.split(" (")[0]}
+            {telemetry ? ` • ${telemetry.estimated_wait_min}m` : ""}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -228,58 +445,107 @@ function UserLocationMarker({
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (ringRef.current) {
-      const s = 1 + (t % 1.6) * 0.9;
+      const s = 1 + (t % 1.6) * 0.85;
       ringRef.current.scale.set(s, s, 1);
       const mat = ringRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = Math.max(0.08, 0.85 - (t % 1.6) * 0.5);
     }
     if (beaconRef.current) {
-      beaconRef.current.position.y = uy + 5.2 + Math.sin(t * 3.2) * 0.8;
+      beaconRef.current.position.y = uy + 5.0 + Math.sin(t * 3.0) * 0.6;
     }
   });
 
   return (
     <group>
-      {/* Expanding radar sonar ring */}
       <mesh
         ref={ringRef}
         position={[ux, uy + 0.35, uz]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
         <ringGeometry args={[3.2, 4.4, 32]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.8} side={THREE.DoubleSide} />
+        <meshBasicMaterial
+          color="#38bdf8"
+          transparent
+          opacity={0.8}
+          side={THREE.DoubleSide}
+        />
       </mesh>
 
-      {/* Directional heading wedge */}
       <group position={[ux, uy + 0.6, uz]} rotation={[0, headingRad, 0]}>
         <mesh position={[0, 0, -5.5]} rotation={[-Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[3.5, 9, 3]} />
-          <meshBasicMaterial color="#67e8f9" transparent opacity={0.45} />
+          <coneGeometry args={[3.2, 8.5, 3]} />
+          <meshBasicMaterial color="#7dd3fc" transparent opacity={0.55} />
         </mesh>
       </group>
 
-      {/* Glowing user beacon pillar & diamond */}
-      <group ref={beaconRef} position={[ux, uy + 5.2, uz]}>
+      <group ref={beaconRef} position={[ux, uy + 5.0, uz]}>
         <mesh>
-          <octahedronGeometry args={[2.6, 0]} />
+          <sphereGeometry args={[2.1, 16, 16]} />
           <meshStandardMaterial
             color="#ffffff"
-            emissive="#22d3ee"
-            emissiveIntensity={2.0}
+            emissive="#0ea5e9"
+            emissiveIntensity={1.9}
           />
         </mesh>
-        <mesh position={[0, -2.5, 0]}>
-          <cylinderGeometry args={[0.35, 0.35, 5, 12]} />
-          <meshBasicMaterial color="#a5f3fc" transparent opacity={0.85} />
+        <mesh position={[0, -2.4, 0]}>
+          <cylinderGeometry args={[0.4, 0.4, 4.8, 12]} />
+          <meshBasicMaterial color="#bae6fd" />
         </mesh>
         {showLabel && (
-          <Html center distanceFactor={190} position={[0, 5.2, 0]}>
-            <div className="pointer-events-none whitespace-nowrap rounded-full border border-cyan-300/80 bg-slate-950/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-cyan-200 shadow-[0_0_12px_rgba(34,211,238,0.65)]">
-              YOU ARE HERE • L{position.level}
+          <Html center distanceFactor={195} position={[0, 4.4, 0]}>
+            <div className="pointer-events-none whitespace-nowrap rounded-full border border-sky-300 bg-sky-950/95 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-sky-100 shadow-lg">
+              YOU • L{position.level}
             </div>
           </Html>
         )}
       </group>
+    </group>
+  );
+}
+
+function SeatMarker3D({
+  seat,
+  showLabel,
+}: {
+  seat: DetectedSeatLocation;
+  showLabel: boolean;
+}) {
+  const [sx, sy, sz] = toThree(seat.x, seat.y, seat.z);
+  const pinRef = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (pinRef.current) {
+      const t = clock.getElapsedTime();
+      pinRef.current.rotation.y = t * 1.8;
+      pinRef.current.position.y = 7.2 + Math.sin(t * 2.8) * 0.7;
+    }
+  });
+
+  return (
+    <group position={[sx, sy, sz]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.35, 0]}>
+        <ringGeometry args={[2.6, 4.2, 24]} />
+        <meshBasicMaterial color="#fbbf24" side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 3.6, 0]}>
+        <cylinderGeometry args={[0.35, 0.35, 7.2, 10]} />
+        <meshBasicMaterial color="#f59e0b" />
+      </mesh>
+      <mesh ref={pinRef} position={[0, 7.2, 0]}>
+        <octahedronGeometry args={[2.4, 0]} />
+        <meshStandardMaterial
+          color="#fef08a"
+          emissive="#f59e0b"
+          emissiveIntensity={1.8}
+        />
+      </mesh>
+      {showLabel && (
+        <Html center distanceFactor={195} position={[0, 11.5, 0]}>
+          <div className="pointer-events-none whitespace-nowrap rounded-lg border border-amber-300 bg-amber-950/95 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-100 shadow-lg">
+            SEAT {seat.normalizedLabel}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -295,7 +561,7 @@ function WaypointTrail3D({
   isExitRoute: boolean;
   showLabels: boolean;
 }) {
-  const trailColor = isExitRoute ? "#34d399" : "#22d3ee";
+  const trailColor = isExitRoute ? "#10b981" : "#38bdf8";
   const particleRefs = useRef<(THREE.Mesh | null)[]>([]);
   const beaconSpinRef = useRef<THREE.Mesh>(null);
 
@@ -304,11 +570,11 @@ function WaypointTrail3D({
       return { curve: null, tubeGeom: null };
     }
     const pts = waypoints.map((w) => {
-      const [x, y, z] = toThree(w.x, w.y, w.z + 2.4);
+      const [x, y, z] = toThree(w.x, w.y, w.z + 2.2);
       return new THREE.Vector3(x, y, z);
     });
     const c = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.25);
-    const tg = new THREE.TubeGeometry(c, Math.max(24, pts.length * 14), 0.95, 8, false);
+    const tg = new THREE.TubeGeometry(c, Math.max(24, pts.length * 14), 1.05, 10, false);
     return { curve: c, tubeGeom: tg };
   }, [waypoints]);
 
@@ -325,14 +591,13 @@ function WaypointTrail3D({
       for (let i = 0; i < count; i++) {
         const mesh = particleRefs.current[i];
         if (!mesh) continue;
-        const u = (t * 0.28 + i / count) % 1;
-        const pos = curve.getPointAt(u);
-        mesh.position.copy(pos);
+        const u = (t * 0.26 + i / count) % 1;
+        mesh.position.copy(curve.getPointAt(u));
       }
     }
     if (beaconSpinRef.current) {
       beaconSpinRef.current.rotation.y = t * 1.8;
-      beaconSpinRef.current.position.y = 14 + Math.sin(t * 2.8) * 1.2;
+      beaconSpinRef.current.position.y = 12 + Math.sin(t * 2.8) * 1.0;
     }
   });
 
@@ -347,16 +612,15 @@ function WaypointTrail3D({
           <meshStandardMaterial
             color={trailColor}
             emissive={trailColor}
-            emissiveIntensity={1.4}
+            emissiveIntensity={1.3}
             transparent
-            opacity={0.78}
+            opacity={0.85}
           />
         </mesh>
       )}
 
-      {/* Animated traveling waypoint light orbs */}
       {curve &&
-        [0, 1, 2, 3, 4, 5].map((idx) => (
+        [0, 1, 2, 3, 4].map((idx) => (
           <mesh
             key={`orb_${idx}`}
             ref={(el) => {
@@ -367,82 +631,40 @@ function WaypointTrail3D({
             <meshStandardMaterial
               color="#ffffff"
               emissive={trailColor}
-              emissiveIntensity={2.4}
+              emissiveIntensity={2.2}
             />
           </mesh>
         ))}
 
-      {/* Waypoint milestone markers */}
-      {waypoints.map((wp) => {
-        const [wx, wy, wz] = toThree(wp.x, wp.y, wp.z + 2.6);
-        const isLevelChange = wp.waypoint_type === "level_transition";
-        const isWarn = wp.waypoint_type === "reroute_avoidance";
-        const markerColor = isWarn
-          ? "#f59e0b"
-          : isLevelChange
-            ? "#a855f7"
-            : trailColor;
-
-        if (wp.waypoint_type === "origin" || wp.waypoint_type === "destination") {
-          return null;
-        }
-        return (
-          <group key={`wp_${wp.order}_${wp.node_id}`} position={[wx, wy, wz]}>
-            <mesh>
-              <octahedronGeometry args={[1.6, 0]} />
-              <meshStandardMaterial
-                color={markerColor}
-                emissive={markerColor}
-                emissiveIntensity={1.5}
-              />
-            </mesh>
-            {isLevelChange && (
-              <mesh position={[0, -4, 0]}>
-                <cylinderGeometry args={[0.45, 0.45, 10, 10]} />
-                <meshBasicMaterial color="#c084fc" transparent opacity={0.75} />
-              </mesh>
-            )}
-            {showLabels && (
-              <Html center distanceFactor={210} position={[0, 3.2, 0]}>
-                <div className="pointer-events-none whitespace-nowrap rounded border border-cyan-400/50 bg-slate-950/85 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-200">
-                  WP {wp.order}
-                  {isLevelChange ? ` • L${wp.level}` : ""}
-                </div>
-              </Html>
-            )}
-          </group>
-        );
-      })}
-
-      {/* Game-style tall objective pillar at target_beacon */}
+      {/* Destination Objective Pillar */}
       <group position={[dx, dy, dz]}>
-        <mesh position={[0, 11, 0]}>
-          <cylinderGeometry args={[1.1, 2.2, 22, 16, 1, true]} />
+        <mesh position={[0, 10, 0]}>
+          <cylinderGeometry args={[1.0, 2.0, 20, 16, 1, true]} />
           <meshBasicMaterial
             color={trailColor}
             transparent
-            opacity={0.38}
+            opacity={0.35}
             side={THREE.DoubleSide}
           />
         </mesh>
-        <mesh ref={beaconSpinRef} position={[0, 14, 0]}>
-          <octahedronGeometry args={[3.4, 0]} />
+        <mesh ref={beaconSpinRef} position={[0, 12, 0]}>
+          <octahedronGeometry args={[3.2, 0]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive={trailColor}
-            emissiveIntensity={2.2}
+            emissiveIntensity={2.0}
           />
         </mesh>
         {showLabels && (
-          <Html center distanceFactor={195} position={[0, 23, 0]}>
+          <Html center distanceFactor={195} position={[0, 20, 0]}>
             <div
               className={`pointer-events-none whitespace-nowrap rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-lg ${
                 isExitRoute
-                  ? "border-emerald-300/80 bg-emerald-950/90 text-emerald-200"
-                  : "border-cyan-300/80 bg-slate-950/90 text-cyan-100"
+                  ? "border-emerald-300 bg-emerald-950/95 text-emerald-100"
+                  : "border-sky-300 bg-slate-950/95 text-sky-100"
               }`}
             >
-              {isExitRoute ? "EXIT WAYPOINT" : "TARGET WAYPOINT"}:{" "}
+              {isExitRoute ? "BEST EXIT" : "DESTINATION"}:{" "}
               {targetLabel ?? dest.node_id}
             </div>
           </Html>
@@ -474,8 +696,8 @@ function IncidentBeacon3D({
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (diamondRef.current) {
-      diamondRef.current.rotation.y = t * 2.4;
-      diamondRef.current.position.y = 11.5 + Math.sin(t * 4) * 1.1;
+      diamondRef.current.rotation.y = t * 2.2;
+      diamondRef.current.position.y = 11 + Math.sin(t * 3.5) * 0.8;
     }
   });
 
@@ -483,74 +705,23 @@ function IncidentBeacon3D({
     <group position={[ix, iy, iz]}>
       <mesh
         ref={diamondRef}
-        position={[0, 11.5, 0]}
+        position={[0, 11, 0]}
         onClick={(e) => {
           e.stopPropagation();
           onSelect?.(incident.node_id);
         }}
       >
-        <octahedronGeometry args={[3.2, 0]} />
+        <octahedronGeometry args={[2.8, 0]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={2.0}
+          emissiveIntensity={1.8}
         />
       </mesh>
-      <mesh position={[0, 5.5, 0]}>
-        <cylinderGeometry args={[0.35, 0.35, 11, 8]} />
-        <meshBasicMaterial color={color} transparent opacity={0.75} />
-      </mesh>
       {showLabel && (
-        <Html center distanceFactor={210} position={[0, 16.5, 0]}>
-          <div className="pointer-events-none whitespace-nowrap rounded border border-red-400/75 bg-red-950/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-100">
+        <Html center distanceFactor={215} position={[0, 15.5, 0]}>
+          <div className="pointer-events-none whitespace-nowrap rounded border border-red-400/80 bg-red-950/95 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-100 shadow">
             ALERT • {incident.category.replace("_", " ")}
-          </div>
-        </Html>
-      )}
-    </group>
-  );
-}
-
-function SeatMarker3D({
-  seat,
-  showLabel,
-}: {
-  seat: DetectedSeatLocation;
-  showLabel: boolean;
-}) {
-  const [sx, sy, sz] = toThree(seat.x, seat.y, seat.z);
-  const pinRef = useRef<THREE.Mesh>(null);
-
-  useFrame(({ clock }) => {
-    if (pinRef.current) {
-      const t = clock.getElapsedTime();
-      pinRef.current.rotation.y = t * 1.9;
-      pinRef.current.position.y = 7.5 + Math.sin(t * 3.0) * 0.9;
-    }
-  });
-
-  return (
-    <group position={[sx, sy, sz]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.35, 0]}>
-        <ringGeometry args={[2.5, 4.2, 24]} />
-        <meshBasicMaterial color="#fbbf24" side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, 3.8, 0]}>
-        <cylinderGeometry args={[0.35, 0.35, 7.6, 10]} />
-        <meshBasicMaterial color="#f59e0b" transparent opacity={0.85} />
-      </mesh>
-      <mesh ref={pinRef} position={[0, 7.5, 0]}>
-        <octahedronGeometry args={[2.5, 0]} />
-        <meshStandardMaterial
-          color="#fef08a"
-          emissive="#f59e0b"
-          emissiveIntensity={2.0}
-        />
-      </mesh>
-      {showLabel && (
-        <Html center distanceFactor={195} position={[0, 12.2, 0]}>
-          <div className="pointer-events-none whitespace-nowrap rounded-lg border border-amber-300/80 bg-amber-950/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.55)]">
-            MY SEAT • {seat.normalizedLabel} (L{seat.level})
           </div>
         </Html>
       )}
@@ -570,8 +741,8 @@ function CameraRig({
   const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null);
   const { camera } = useThree();
   const animatingRef = useRef(false);
-  const goalPosRef = useRef(new THREE.Vector3(0, 155, 225));
-  const goalTargetRef = useRef(new THREE.Vector3(0, 8, 0));
+  const goalPosRef = useRef(new THREE.Vector3(0, 165, 225));
+  const goalTargetRef = useRef(new THREE.Vector3(0, 6, 0));
   const userPosRef = useRef(userPosition);
   const seatRef = useRef(seatLocation);
 
@@ -582,23 +753,20 @@ function CameraRig({
     if (cameraRequest.id === 0) return;
     const preset = cameraRequest.preset;
     if (preset === "aerial") {
-      goalPosRef.current.set(0, 155, 225);
-      goalTargetRef.current.set(0, 8, 0);
+      goalPosRef.current.set(0, 165, 225);
+      goalTargetRef.current.set(0, 6, 0);
     } else if (preset === "top_down") {
-      goalPosRef.current.set(0, 275, 22);
+      goalPosRef.current.set(0, 280, 18);
       goalTargetRef.current.set(0, 0, 0);
     } else if (preset === "pitch_view") {
-      goalPosRef.current.set(0, 14, 52);
-      goalTargetRef.current.set(0, 16, -85);
-    } else if (preset === "exits") {
-      goalPosRef.current.set(-160, 120, 165);
-      goalTargetRef.current.set(0, 4, 0);
+      goalPosRef.current.set(0, 16, 48);
+      goalTargetRef.current.set(0, 14, -85);
     } else if (preset === "follow_me") {
       const targetPos = userPosRef.current ?? seatRef.current;
       if (targetPos) {
         const [ux, uy, uz] = toThree(targetPos.x, targetPos.y, targetPos.z);
         goalTargetRef.current.set(ux, uy + 4, uz);
-        goalPosRef.current.set(ux + 55, uy + 58, uz + 65);
+        goalPosRef.current.set(ux + 52, uy + 55, uz + 62);
       }
     }
     animatingRef.current = true;
@@ -606,7 +774,7 @@ function CameraRig({
 
   useFrame((_, delta) => {
     if (!animatingRef.current || !controlsRef.current) return;
-    const alpha = Math.min(1, delta * 4.5);
+    const alpha = Math.min(1, delta * 5.0);
     camera.position.lerp(goalPosRef.current, alpha);
     controlsRef.current.target.lerp(goalTargetRef.current, alpha);
     controlsRef.current.update();
@@ -623,12 +791,12 @@ function CameraRig({
       ref={controlsRef}
       makeDefault
       enableDamping
-      dampingFactor={0.07}
+      dampingFactor={0.08}
       enableZoom
       enablePan
       enableRotate
-      minDistance={32}
-      maxDistance={420}
+      minDistance={35}
+      maxDistance={430}
       maxPolarAngle={Math.PI * 0.485}
       onStart={() => {
         animatingRef.current = false;
@@ -664,14 +832,17 @@ export function HologramSceneContent({
       ),
     [telemetry.nodes]
   );
+  const routeSet = useMemo(
+    () => new Set(guidance?.route_node_ids ?? []),
+    [guidance?.route_node_ids]
+  );
 
   const spec = topology.hologram_spec;
   const fieldRadius = spec?.field_radius_m ?? 68;
-  const outerRingPts = useMemo(() => buildRingPoints(fieldRadius, 0.4), [fieldRadius]);
-  const innerCirclePts = useMemo(() => buildRingPoints(27.4, 0.45, 64), []);
-  const radarRing1 = useMemo(() => buildRingPoints(102, 0.25), []);
-  const radarRing2 = useMemo(() => buildRingPoints(134, 0.25), []);
-  const radarRing3 = useMemo(() => buildRingPoints(162, 0.25), []);
+  const boundaryPts = useMemo(() => buildRingPoints(fieldRadius, 0.35), [fieldRadius]);
+  const innerCirclePts = useMemo(() => buildRingPoints(27.4, 0.38, 64), []);
+  const concourseRingPts = useMemo(() => buildRingPoints(102, 0.25), []);
+  const plazaRingPts = useMemo(() => buildRingPoints(136, 0.2), []);
   const canopyInner = useMemo(
     () =>
       buildRingPoints(
@@ -719,11 +890,6 @@ export function HologramSceneContent({
     onPlaceUser(wx, wy, inferredLevel);
   };
 
-  const showWaypoints =
-    layerFilter === "all" ||
-    layerFilter === "waypoints" ||
-    layerFilter === "exits";
-
   const isExitRoute =
     guidance?.target_beacon?.node_id !== undefined &&
     nodeMap.get(guidance.target_beacon.node_id)?.type === "gate" &&
@@ -731,12 +897,11 @@ export function HologramSceneContent({
 
   return (
     <>
-      <color attach="background" args={["#030816"]} />
-      <fog attach="fog" args={["#030816", 240, 520]} />
-      <ambientLight intensity={0.45} />
-      <pointLight position={[0, 120, 0]} intensity={1.8} color="#38bdf8" />
-      <pointLight position={[-120, 80, 120]} intensity={0.9} color="#06b6d4" />
-      <pointLight position={[120, 80, -120]} intensity={0.9} color="#10b981" />
+      <color attach="background" args={["#060d1b"]} />
+      <fog attach="fog" args={["#060d1b", 260, 560]} />
+      <ambientLight intensity={0.65} />
+      <directionalLight position={[90, 180, 120]} intensity={1.1} color="#e0f2fe" />
+      <pointLight position={[0, 90, 0]} intensity={1.2} color="#38bdf8" />
 
       <CameraRig
         cameraRequest={cameraRequest}
@@ -744,80 +909,97 @@ export function HologramSceneContent({
         seatLocation={seatLocation}
       />
 
-      {/* Clickable Holographic Radar Ground Plane */}
+      {/* Stadium Architectural Plinth & Ground */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
         onClick={handleFloorClick}
       >
         <circleGeometry args={[175, 72]} />
-        <meshBasicMaterial color="#061428" transparent opacity={0.58} />
+        <meshStandardMaterial color="#0b1528" roughness={0.85} metalness={0.15} />
       </mesh>
-      <gridHelper args={[340, 34, "#0e7490", "#082f49"]} position={[0, 0.08, 0]} />
+      <Line points={concourseRingPts} color="#1e3a5f" lineWidth={1.2} />
+      <Line points={plazaRingPts} color="#1e293b" lineWidth={1.2} />
 
-      {/* Concentric Hologram Radar Rings */}
-      <Line points={radarRing1} color="#0891b2" lineWidth={1} transparent opacity={0.4} />
-      <Line points={radarRing2} color="#0891b2" lineWidth={1} transparent opacity={0.35} />
-      <Line points={radarRing3} color="#0e7490" lineWidth={1} transparent opacity={0.28} />
-
-      {/* Cricket Field Boundary, 30-Yard Circle & Central Pitch */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.2, 0]}>
-        <circleGeometry args={[fieldRadius, 64]} />
-        <meshBasicMaterial color="#064e3b" transparent opacity={0.32} />
+      {/* Cricket Outfield & Pitch */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.15, 0]}>
+        <circleGeometry args={[fieldRadius, 72]} />
+        <meshStandardMaterial color="#09382b" roughness={0.9} />
       </mesh>
-      <Line points={outerRingPts} color="#2dd4bf" lineWidth={2} />
-      <Line points={innerCirclePts} color="#14b8a6" lineWidth={1} transparent opacity={0.55} />
-      <mesh position={[0, 0.35, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[3.2, spec?.pitch_length_m ?? 20.12]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.45} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.18, 0]}>
+        <circleGeometry args={[46, 64]} />
+        <meshStandardMaterial color="#0b4636" roughness={0.9} />
+      </mesh>
+      <Line points={boundaryPts} color="#34d399" lineWidth={2} />
+      <Line points={innerCirclePts} color="#6ee7b7" lineWidth={1} transparent opacity={0.55} />
+
+      {/* Central Cricket Pitch Strip */}
+      <mesh position={[0, 0.28, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[3.1, spec?.pitch_length_m ?? 20.12]} />
+        <meshStandardMaterial color="#d6c29b" roughness={0.9} />
       </mesh>
 
       {showLabels && spec?.ends && (
         <>
-          <Html center distanceFactor={230} position={[0, 3, -52]}>
-            <div className="pointer-events-none whitespace-nowrap rounded border border-teal-400/40 bg-slate-950/80 px-2 py-0.5 text-[9px] font-semibold text-teal-200">
+          <Html center distanceFactor={235} position={[0, 3, -52]}>
+            <div className="pointer-events-none whitespace-nowrap rounded bg-slate-950/80 px-2 py-0.5 text-[9px] font-medium text-emerald-200/90">
               {spec.ends.north_end}
             </div>
           </Html>
-          <Html center distanceFactor={230} position={[0, 3, 52]}>
-            <div className="pointer-events-none whitespace-nowrap rounded border border-teal-400/40 bg-slate-950/80 px-2 py-0.5 text-[9px] font-semibold text-teal-200">
+          <Html center distanceFactor={235} position={[0, 3, 52]}>
+            <div className="pointer-events-none whitespace-nowrap rounded bg-slate-950/80 px-2 py-0.5 text-[9px] font-medium text-emerald-200/90">
               {spec.ends.south_end}
             </div>
           </Html>
         </>
       )}
 
-      {/* Perimeter Road Labels */}
       {showLabels &&
         spec?.perimeter_roads?.map((road) => {
           const [rx, , rz] = toThree(road.label_x, road.label_y, 0);
           return (
-            <Html key={road.name} center distanceFactor={260} position={[rx, 2, rz]}>
-              <div className="pointer-events-none whitespace-nowrap rounded bg-slate-900/75 px-2 py-0.5 text-[9px] font-medium uppercase tracking-widest text-cyan-300/80">
+            <Html key={road.name} center distanceFactor={265} position={[rx, 2, rz]}>
+              <div className="pointer-events-none whitespace-nowrap rounded border border-slate-700/70 bg-slate-900/85 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-slate-300">
                 {road.name}
               </div>
             </Html>
           );
         })}
 
-      {/* 3D Holographic Stand Sectors */}
+      {/* 3D Architectural Seating Stand Sectors */}
       {spec?.stand_sectors?.map((sector) => {
         const score = telemetryMap.get(sector.linked_node_id)?.congestion_score ?? 0.3;
         return (
-          <StandSectorMesh
+          <StandTierBlock
             key={sector.id}
             sector={sector}
             congestionScore={score}
             isSelected={selectedNodeId === sector.linked_node_id}
-            dimmed={layerFilter === "exits"}
+            isGatesOnly={layerFilter === "gates_only" || layerFilter === "route_only"}
             onSelect={onSelectNode}
           />
         );
       })}
 
-      {/* Solar Canopy Ring & Struts */}
-      <Line points={canopyInner} color="#38bdf8" lineWidth={1.5} transparent opacity={0.6} />
-      <Line points={canopyOuter} color="#22d3ee" lineWidth={1.5} transparent opacity={0.5} />
+      {/* Sleek Solar Canopy Ring */}
+      <mesh position={[0, spec?.canopy_ring?.elevation_m ?? 26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry
+          args={[
+            spec?.canopy_ring?.inner_radius_m ?? 94,
+            spec?.canopy_ring?.outer_radius_m ?? 132,
+            72,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#0c4a6e"
+          transparent
+          opacity={0.18}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      <Line points={canopyInner} color="#38bdf8" lineWidth={1.5} transparent opacity={0.55} />
+      <Line points={canopyOuter} color="#0ea5e9" lineWidth={1.5} transparent opacity={0.45} />
       {canopyStruts.map((pair, idx) => (
         <Line
           key={`strut_${idx}`}
@@ -825,13 +1007,13 @@ export function HologramSceneContent({
           color="#0284c7"
           lineWidth={1}
           transparent
-          opacity={0.35}
+          opacity={0.25}
         />
       ))}
 
-      {/* 4 Iconic Floodlight Towers */}
+      {/* 4 Floodlight Towers */}
       {spec?.floodlight_towers?.map((tower) => (
-        <FloodlightTowerMesh
+        <FloodlightTower
           key={tower.id}
           x={tower.x}
           y={tower.y}
@@ -839,120 +1021,76 @@ export function HologramSceneContent({
         />
       ))}
 
-      {/* Walkable Concourse & Gate Network Edges */}
-      {topology.edges.map((edge) => {
-        const from = nodeMap.get(edge.from_node);
-        const to = nodeMap.get(edge.to_node);
-        if (!from || !to) return null;
-        return (
-          <Line
-            key={edge.id}
-            points={[
-              toThree(from.x, from.y, (from.z ?? 0) + 0.5),
-              toThree(to.x, to.y, (to.z ?? 0) + 0.5),
-            ]}
-            color={edge.accessible === false ? "#a855f7" : "#0e7490"}
-            lineWidth={1}
-            transparent
-            opacity={layerFilter === "waypoints" ? 0.25 : 0.42}
-          />
-        );
-      })}
+      {/* Walkable Concourse Pathways (subtle) */}
+      {layerFilter !== "gates_only" &&
+        topology.edges.map((edge) => {
+          const from = nodeMap.get(edge.from_node);
+          const to = nodeMap.get(edge.to_node);
+          if (!from || !to) return null;
+          return (
+            <Line
+              key={edge.id}
+              points={[
+                toThree(from.x, from.y, (from.z ?? 0) + 0.35),
+                toThree(to.x, to.y, (to.z ?? 0) + 0.35),
+              ]}
+              color={edge.accessible === false ? "#8b5cf6" : "#1e3a5f"}
+              lineWidth={1}
+              transparent
+              opacity={0.45}
+            />
+          );
+        })}
 
-      {/* Stadium Nodes: Live Congestion Pillars, Exit Portals & Amenity Markers */}
+      {/* Stadium Nodes: Architectural Gate Portals & Clean Facility Pods */}
       {topology.nodes.map((node) => {
         const telem = telemetryMap.get(node.id);
-        const score = telem?.congestion_score ?? 0.3;
-        const visuals = getCongestionVisuals(telem?.status ?? "optimal");
-        const isExit =
-          node.type === "gate" &&
-          (node.gate_role === "exit" || node.gate_role === "entry_exit");
         const isGate = node.type === "gate";
         const isAmenity =
           node.type === "concession" ||
           node.type === "restroom" ||
           node.type === "medical";
+        const onRoute = routeSet.has(node.id);
 
-        if (layerFilter === "exits" && !isGate) return null;
-        if (layerFilter === "amenities" && !isAmenity) return null;
+        if (layerFilter === "gates_only" && !isGate && node.type !== "transit") {
+          return null;
+        }
+        if (layerFilter === "amenities" && !isAmenity && !isGate) {
+          return null;
+        }
+        if (layerFilter === "route_only" && !onRoute) {
+          return null;
+        }
 
-        const [nx, ny, nz] = toThree(node.x, node.y, node.z ?? 0);
-        const pillarH = 3 + score * 16;
-        const isSelected = selectedNodeId === node.id;
-        const nodeColor =
-          layerFilter === "exits" && isExit
-            ? "#34d399"
-            : visuals.hex;
+        if (isGate) {
+          return (
+            <GatePortalMarker
+              key={node.id}
+              node={node}
+              telemetry={telem}
+              isSelected={selectedNodeId === node.id}
+              isOnRoute={onRoute}
+              showLabel={showLabels}
+              onSelect={onSelectNode}
+            />
+          );
+        }
 
         return (
-          <group key={node.id} position={[nx, ny, nz]}>
-            {/* Base Pedestal Ring */}
-            <mesh
-              rotation={[-Math.PI / 2, 0, 0]}
-              position={[0, 0.2, 0]}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectNode?.(node.id);
-              }}
-            >
-              <ringGeometry args={[2.3, 3.6, 20]} />
-              <meshBasicMaterial
-                color={isSelected ? "#ffffff" : isExit ? "#34d399" : nodeColor}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-
-            {/* Congestion Column */}
-            <mesh
-              position={[0, pillarH / 2 + 0.3, 0]}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectNode?.(node.id);
-              }}
-            >
-              <cylinderGeometry args={[1.25, 1.85, pillarH, 12]} />
-              <meshStandardMaterial
-                color={nodeColor}
-                emissive={nodeColor}
-                emissiveIntensity={isSelected ? 1.6 : 0.75 + score * 0.8}
-                transparent
-                opacity={0.78}
-              />
-            </mesh>
-
-            {/* Dedicated EXIT Arch Ring on Exit-Capable Gates */}
-            {isExit && (
-              <mesh position={[0, 3.6, 0]}>
-                <torusGeometry args={[4.2, 0.45, 8, 24, Math.PI]} />
-                <meshStandardMaterial
-                  color="#34d399"
-                  emissive="#10b981"
-                  emissiveIntensity={1.6}
-                />
-              </mesh>
-            )}
-
-            {showLabels && (isGate || isSelected || layerFilter === "amenities") && (
-              <Html center distanceFactor={215} position={[0, pillarH + 3.6, 0]}>
-                <div
-                  className={`pointer-events-none whitespace-nowrap rounded border px-1.5 py-0.5 text-[9px] font-semibold ${
-                    isExit
-                      ? "border-emerald-400/70 bg-emerald-950/90 text-emerald-200"
-                      : "border-slate-600 bg-slate-950/85 text-slate-200"
-                  }`}
-                >
-                  {isExit ? "EXIT • " : isGate ? "ENTRY • " : ""}
-                  {node.stand_code ?? node.name.split(" (")[0]}{" "}
-                  {telem ? `(${telem.estimated_wait_min}m)` : ""}
-                </div>
-              </Html>
-            )}
-          </group>
+          <FacilityPodMarker
+            key={node.id}
+            node={node}
+            telemetry={telem}
+            isSelected={selectedNodeId === node.id}
+            isOnRoute={onRoute}
+            showLabel={showLabels}
+            onSelect={onSelectNode}
+          />
         );
       })}
 
-      {/* Floating 3D Incident Beacons */}
-      {layerFilter !== "exits" &&
+      {/* Active Incident Beacons */}
+      {layerFilter !== "gates_only" &&
         activeIncidents.map((inc) => (
           <IncidentBeacon3D
             key={inc.incident_id}
@@ -966,12 +1104,12 @@ export function HologramSceneContent({
       {activeFans.map((fan, idx) => {
         const [fx, fy, fz] = toThree(fan.x, fan.y, fan.z);
         return (
-          <mesh key={`fan_${fan.snapped_node_id}_${idx}`} position={[fx, fy + 2.2, fz]}>
-            <sphereGeometry args={[1.45, 10, 10]} />
+          <mesh key={`fan_${fan.snapped_node_id}_${idx}`} position={[fx, fy + 2.0, fz]}>
+            <sphereGeometry args={[1.35, 10, 10]} />
             <meshStandardMaterial
-              color="#67e8f9"
-              emissive="#06b6d4"
-              emissiveIntensity={1.5}
+              color="#7dd3fc"
+              emissive="#0ea5e9"
+              emissiveIntensity={1.4}
             />
           </mesh>
         );
@@ -982,13 +1120,13 @@ export function HologramSceneContent({
         <SeatMarker3D seat={seatLocation} showLabel={showLabels} />
       )}
 
-      {/* Exact User Location Marker */}
+      {/* User Location Marker */}
       {userPosition && (
         <UserLocationMarker position={userPosition} showLabel={showLabels} />
       )}
 
-      {/* Game-Style Animated 3D Waypoints */}
-      {showWaypoints && guidance && guidance.waypoints_3d.length > 0 && (
+      {/* Animated Waypoints */}
+      {guidance && guidance.waypoints_3d.length > 0 && (
         <WaypointTrail3D
           waypoints={guidance.waypoints_3d}
           targetLabel={guidance.target_beacon?.label}

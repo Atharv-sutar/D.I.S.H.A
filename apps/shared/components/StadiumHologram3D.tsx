@@ -8,6 +8,7 @@ import {
   DoorOpen,
   Eye,
   Layers,
+  LogOut,
   MapPin,
   Navigation,
   RotateCcw,
@@ -43,23 +44,23 @@ export interface StadiumHologram3DProps {
   title?: string;
   onSelectNode?: (nodeId: string) => void;
   onPlaceUser?: (x: number, y: number, level: number) => void;
-  onQuickWaypoint?: (mode: "entry" | "exit" | "concession" | "restroom" | "medical") => void;
+  onQuickWaypoint?: (
+    mode: "entry" | "exit" | "concession" | "restroom" | "medical"
+  ) => void;
 }
 
 const LAYER_TABS: { id: HologramLayerFilter; label: string }[] = [
-  { id: "all", label: "All Layers" },
-  { id: "congestion", label: "Congestion" },
-  { id: "exits", label: "Exits & Gates" },
-  { id: "waypoints", label: "Waypoints" },
-  { id: "amenities", label: "Food / WC / Med" },
+  { id: "all", label: "Full Stadium" },
+  { id: "gates_only", label: "Gates Only" },
+  { id: "amenities", label: "Food / WC / Aid" },
+  { id: "route_only", label: "Route Focus" },
 ];
 
 const CAMERA_BUTTONS: { id: CameraPreset; label: string }[] = [
   { id: "aerial", label: "Reset View" },
   { id: "follow_me", label: "My Location" },
-  { id: "top_down", label: "Top-Down" },
-  { id: "pitch_view", label: "Pitch View" },
-  { id: "exits", label: "Exits View" },
+  { id: "top_down", label: "Top View" },
+  { id: "pitch_view", label: "Inside Bowl" },
 ];
 
 export function StadiumHologram3D({
@@ -71,8 +72,8 @@ export function StadiumHologram3D({
   seatLocation,
   activeFans,
   selectedNodeId,
-  heightClassName = "h-[460px] sm:h-[540px]",
-  title = "M. Chinnaswamy Stadium • 3D Hologram Digital Twin",
+  heightClassName = "h-[480px] sm:h-[560px]",
+  title = "M. Chinnaswamy Stadium • 3D Interactive Map",
   onSelectNode,
   onPlaceUser,
   onQuickWaypoint,
@@ -105,31 +106,30 @@ export function StadiumHologram3D({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-cyan-500/30 bg-[#030816] shadow-[0_0_32px_rgba(6,182,212,0.12)]">
-      {/* Top Hologram Control Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 bg-slate-950/90 px-4 py-2.5">
+    <section className="overflow-hidden rounded-2xl border border-slate-700/80 bg-[#060d1b] shadow-2xl">
+      {/* Top Camera & View Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/95 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <Compass className="h-4 w-4 text-cyan-400" />
-          <h2 className="text-sm font-semibold text-cyan-50">{title}</h2>
-          <span className="hidden rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300 sm:inline-block">
-            Drag: Look Around • Scroll: Zoom • Right-Drag: Move
+          <Compass className="h-4 w-4 text-sky-400" />
+          <h2 className="text-sm font-semibold text-white">{title}</h2>
+          <span className="hidden rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300 md:inline-block">
+            Drag: Look Around • Scroll: Zoom • Right-Drag: Pan
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
           {CAMERA_BUTTONS.map((btn) => {
-            if (btn.id === "follow_me" && !userPosition) return null;
+            if (btn.id === "follow_me" && !userPosition && !seatLocation) return null;
             return (
               <button
                 key={btn.id}
                 type="button"
                 onClick={() => triggerCamera(btn.id)}
-                className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/30 bg-slate-900/90 px-2.5 py-1 text-[11px] font-medium text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-500/15"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-sky-400 hover:bg-sky-500/15"
               >
-                {btn.id === "aerial" && <RotateCcw className="h-3 w-3" />}
-                {btn.id === "follow_me" && <Crosshair className="h-3 w-3" />}
-                {btn.id === "exits" && <DoorOpen className="h-3 w-3" />}
-                {btn.id === "pitch_view" && <Eye className="h-3 w-3" />}
+                {btn.id === "aerial" && <RotateCcw className="h-3 w-3 text-sky-400" />}
+                {btn.id === "follow_me" && <Crosshair className="h-3 w-3 text-sky-400" />}
+                {btn.id === "pitch_view" && <Eye className="h-3 w-3 text-sky-400" />}
                 <span>{btn.label}</span>
               </button>
             );
@@ -140,7 +140,7 @@ export function StadiumHologram3D({
             onClick={() => setShowLabels((s) => !s)}
             className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition ${
               showLabels
-                ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-100"
+                ? "border-sky-500/60 bg-sky-500/15 text-sky-100"
                 : "border-slate-700 bg-slate-900 text-slate-400"
             }`}
           >
@@ -154,69 +154,77 @@ export function StadiumHologram3D({
               onClick={() => setPlaceUserMode((m) => !m)}
               className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
                 placeUserMode
-                  ? "border-emerald-400 bg-emerald-500/25 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                  : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/50"
+                  ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                  : "border-slate-700 bg-slate-900 text-slate-200 hover:border-sky-400"
               }`}
             >
               <MapPin className="h-3 w-3" />
-              <span>{placeUserMode ? "Tap Floor to Place Me" : "Move My Location"}</span>
+              <span>{placeUserMode ? "Click Map to Place Me" : "Set My Location"}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Filter & Waypoint Quick Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/15 bg-slate-950/75 px-4 py-2">
-        <div className="flex flex-wrap items-center gap-1">
-          <Layers className="mr-1 h-3.5 w-3.5 text-cyan-400" />
+      {/* Filter & Quick Navigation Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/90 px-4 py-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Layers className="mr-0.5 h-3.5 w-3.5 text-sky-400" />
           {LAYER_TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setLayerFilter(tab.id)}
-              className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
                 layerFilter === tab.id
-                  ? "bg-cyan-500/25 text-cyan-100 ring-1 ring-cyan-400/60"
-                  : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200"
+                  ? "bg-sky-500 text-slate-950 font-semibold"
+                  : "bg-slate-950/70 text-slate-300 hover:bg-slate-800"
               }`}
             >
-              {tab.label}
+              {tab.id === "gates_only" && <DoorOpen className="h-3.5 w-3.5" />}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
 
         {onQuickWaypoint && (
-          <div className="flex flex-wrap items-center gap-1">
-            <Navigation className="mr-0.5 h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-[11px] font-medium text-slate-400">
-              Waypoints:
-            </span>
-            {(
-              [
-                { id: "entry", label: "Entry" },
-                { id: "exit", label: "Exit" },
-                { id: "concession", label: "Food" },
-                { id: "restroom", label: "Restroom" },
-                { id: "medical", label: "Medical" },
-              ] as const
-            ).map((wp) => (
-              <button
-                key={wp.id}
-                type="button"
-                onClick={() => onQuickWaypoint(wp.id)}
-                className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200 transition hover:bg-emerald-500/25"
-              >
-                {wp.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Navigation className="h-3.5 w-3.5 text-emerald-400" />
+            <button
+              type="button"
+              onClick={() => onQuickWaypoint("exit")}
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-slate-950 transition hover:bg-emerald-400"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Best Exit (Low Crowd)
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickWaypoint("entry")}
+              className="rounded-lg border border-sky-500/40 bg-sky-500/15 px-2.5 py-1 text-xs font-semibold text-sky-200 hover:bg-sky-500/25"
+            >
+              Best Entry
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickWaypoint("concession")}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-200 hover:border-slate-500"
+            >
+              Food
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickWaypoint("restroom")}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-200 hover:border-slate-500"
+            >
+              Restroom
+            </button>
           </div>
         )}
       </div>
 
-      {/* 3D WebGL Canvas */}
+      {/* 3D Canvas */}
       <div className={`relative w-full ${heightClassName}`}>
         <Canvas
-          camera={{ position: [0, 155, 225], fov: 46, near: 1, far: 1200 }}
+          camera={{ position: [0, 165, 225], fov: 45, near: 1, far: 1200 }}
           dpr={[1, 2]}
           gl={{ antialias: true, powerPreference: "high-performance" }}
         >
@@ -243,34 +251,36 @@ export function StadiumHologram3D({
           </Suspense>
         </Canvas>
 
-        {/* Bottom-Left Hologram Legend */}
-        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2 rounded-xl border border-cyan-500/25 bg-slate-950/80 px-3 py-1.5 text-[10px] text-slate-200 backdrop-blur">
+        {/* Bottom-Left Compact Legend */}
+        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2.5 rounded-xl border border-slate-700/80 bg-slate-950/85 px-3 py-1.5 text-[10px] text-slate-200 backdrop-blur">
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-cyan-400" /> You / Optimal
+            <span className="h-2 w-2 rounded-full bg-emerald-400" /> Low Crowd / Exit
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-amber-400" /> Moderate
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-red-500" /> Critical / Alert
+            <span className="h-2 w-2 rounded-full bg-red-500" /> Crowded / Alert
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" /> Exit / Waypoint
+            <span className="h-2 w-2 rounded-full bg-sky-400" /> You
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-300" /> My Seat
+            <span className="h-2 w-2 rounded-full bg-amber-300" /> Seat
           </span>
         </div>
 
-        {/* Bottom-Right Selected Node Telemetry Card */}
+        {/* Bottom-Right Selected Location Inspector */}
         {selectedNode && selectedTelem && selectedVisuals && (
-          <div className="absolute bottom-3 right-3 w-64 rounded-xl border border-cyan-500/35 bg-slate-950/90 p-3 text-xs backdrop-blur">
+          <div className="absolute bottom-3 right-3 w-64 rounded-xl border border-slate-700 bg-slate-950/92 p-3 text-xs shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-white">{selectedNode.name}</p>
-                <p className="text-[10px] uppercase tracking-wider text-cyan-300">
+                <p className="text-[10px] uppercase tracking-wider text-sky-300">
                   Level {selectedNode.level} • {selectedNode.type.replace("_", " ")}
-                  {selectedNode.gate_role ? ` (${selectedNode.gate_role.replace("_", "/")})` : ""}
+                  {selectedNode.gate_role
+                    ? ` (${selectedNode.gate_role.replace("_", "/")})`
+                    : ""}
                 </p>
               </div>
               <span
@@ -280,19 +290,19 @@ export function StadiumHologram3D({
               </span>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-              <div className="rounded bg-slate-900/90 px-1.5 py-1">
-                <p className="text-[10px] text-slate-400">Congestion</p>
+              <div className="rounded bg-slate-900 px-1.5 py-1">
+                <p className="text-[10px] text-slate-400">Crowd</p>
                 <p className="font-semibold text-white">
                   {Math.round(selectedTelem.congestion_score * 100)}%
                 </p>
               </div>
-              <div className="rounded bg-slate-900/90 px-1.5 py-1">
+              <div className="rounded bg-slate-900 px-1.5 py-1">
                 <p className="text-[10px] text-slate-400">Wait</p>
                 <p className="font-semibold text-white">
                   {selectedTelem.estimated_wait_min}m
                 </p>
               </div>
-              <div className="rounded bg-slate-900/90 px-1.5 py-1">
+              <div className="rounded bg-slate-900 px-1.5 py-1">
                 <p className="text-[10px] text-slate-400">Queue</p>
                 <p className="font-semibold text-white">
                   {selectedTelem.queue_length}

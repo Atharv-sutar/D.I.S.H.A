@@ -126,13 +126,7 @@ export function WayfindingControls({
     detectedSeat?.normalizedLabel ?? "E-12-45"
   );
 
-  const originOptions = topology.nodes.filter(
-    (n) =>
-      n.type === "transit" ||
-      n.type === "gate" ||
-      n.type === "concourse" ||
-      n.type === "seating_section"
-  );
+  const originOptions = topology.nodes;
 
   const targetCandidates = topology.nodes.filter((n) => {
     if (n.type !== params.target_type) return false;
