@@ -126,6 +126,14 @@ def test_http_server_endpoints_end_to_end() -> None:
             )
             assert coord_route.status_code == 200
             assert coord_route.json()["origin_node_id"] == "transit_cubbon_park_metro"
+
+            mode_off = client.post("/simulation/mode", json={"randomizer_enabled": False})
+            assert mode_off.status_code == 200
+            assert mode_off.json()["control_mode"] == "manual"
+
+            status = client.get("/simulation/status")
+            assert status.status_code == 200
+            assert status.json()["randomizer_enabled"] is False
     finally:
         server.shutdown()
         server.server_close()

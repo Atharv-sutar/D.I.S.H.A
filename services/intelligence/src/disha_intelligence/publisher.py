@@ -90,6 +90,10 @@ class SimulationPublisher:
                     if isinstance(v, (int, float))
                 }
                 self.simulator.sync_bottlenecks(parsed)
+            if "randomizer_enabled" in data and isinstance(data["randomizer_enabled"], bool):
+                self.simulator.set_randomizer(data["randomizer_enabled"])
+            elif data.get("control_mode") in ("randomized", "manual"):
+                self.simulator.set_randomizer(data["control_mode"] == "randomized")
         except (httpx.HTTPError, ValueError, TypeError):
             return
 
@@ -171,6 +175,11 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--ticks", type=int, default=None, help="Max ticks to run.")
     parser.add_argument("--dry-run", action="store_true", help="Print JSON ticks to stdout.")
+    parser.add_argument(
+        "--manual",
+        action="store_true",
+        help="Start with randomizer disabled (strict manual control mode).",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -180,6 +189,8 @@ def main(argv: list[str] | None = None) -> None:
         seed=config.random_seed,
         tick_seconds=config.tick_interval_seconds,
     )
+    if args.manual:
+        sim.set_randomizer(False)
     asyncio.run(SimulationPublisher(config=config, simulator=sim).run_loop(args.ticks, args.dry_run))
 
 

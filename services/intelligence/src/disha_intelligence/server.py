@@ -105,6 +105,10 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                         "venue_id": runtime.simulator.topology.venue_id,
                         "phase": runtime.simulator.event_phase,
                         "tick": runtime.simulator._tick_count,
+                        "randomizer_enabled": runtime.simulator.randomizer_enabled,
+                        "control_mode": (
+                            "randomized" if runtime.simulator.randomizer_enabled else "manual"
+                        ),
                     }
                 self._send_json(HTTPStatus.OK, payload)
                 return
@@ -125,6 +129,10 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                         "venue_id": runtime.simulator.topology.venue_id,
                         "event_phase": runtime.simulator.event_phase,
                         "tick_count": runtime.simulator._tick_count,
+                        "randomizer_enabled": runtime.simulator.randomizer_enabled,
+                        "control_mode": (
+                            "randomized" if runtime.simulator.randomizer_enabled else "manual"
+                        ),
                         "bottlenecked_nodes": {
                             nid: bn.severity for nid, bn in runtime.simulator._bottlenecks.items()
                         },
@@ -234,6 +242,36 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                     {
                         "snapshot": snap.model_dump(mode="json"),
                         "incidents": [i.model_dump(mode="json") for i in incidents],
+                    },
+                )
+                return
+
+            if path in ("/simulation/mode", "/simulation/randomizer"):
+                body = self._read_json_body()
+                if "randomizer_enabled" in body:
+                    enabled = bool(body["randomizer_enabled"])
+                elif "mode" in body:
+                    mode_val = str(body["mode"]).lower()
+                    if mode_val not in ("randomized", "manual"):
+                        self._send_json(
+                            HTTPStatus.BAD_REQUEST,
+                            {"error": "mode must be 'randomized' or 'manual'"},
+                        )
+                        return
+                    enabled = mode_val == "randomized"
+                else:
+                    self._send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "randomizer_enabled or mode is required"},
+                    )
+                    return
+                with runtime.lock:
+                    runtime.simulator.set_randomizer(enabled)
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "randomizer_enabled": enabled,
+                        "control_mode": "randomized" if enabled else "manual",
                     },
                 )
                 return

@@ -119,12 +119,14 @@ class CrowdSimulator:
         initial_phase: EventPhase = "pre_event_ingress",
         start_time: datetime | None = None,
         tick_seconds: float = 2.0,
+        randomizer_enabled: bool = True,
     ) -> None:
         self.topology = topology or build_default_topology()
         self.seed = seed
         self._rng = np.random.default_rng(np.random.PCG64(seed))
         self.event_phase: EventPhase = initial_phase
         self._tick_seconds = tick_seconds
+        self.randomizer_enabled: bool = randomizer_enabled
         self._current_time = start_time or datetime(2026, 11, 25, 18, 0, 0, tzinfo=UTC)
         self._tick_count = 0
         self._prev_scores: dict[str, float] = {}
@@ -134,6 +136,10 @@ class CrowdSimulator:
         self._manual_relief: set[str] = set()
         self._phase_just_changed: bool = False
         self._node_map: dict[str, TopologyNode] = {n.id: n for n in self.topology.nodes}
+
+    def set_randomizer(self, enabled: bool) -> None:
+        """Enable or disable randomized crowd fluctuations (False = strict manual control)."""
+        self.randomizer_enabled = bool(enabled)
 
     def set_phase(self, phase: EventPhase) -> None:
         """Switch the active stadium event phase."""
@@ -188,9 +194,13 @@ class CrowdSimulator:
 
         for idx, node in enumerate(self.topology.nodes):
             base_ratio = profile[node.type]
-            # Deterministic wave + small noise so different gates/stands diverge naturally
-            wave = 0.08 * np.sin(self._tick_count * 0.25 + idx * 0.9)
-            noise = float(self._rng.normal(0.0, 0.035))
+            if self.randomizer_enabled:
+                # Deterministic wave + small noise so different gates/stands diverge naturally
+                wave = 0.08 * np.sin(self._tick_count * 0.25 + idx * 0.9)
+                noise = float(self._rng.normal(0.0, 0.035))
+            else:
+                wave = 0.0
+                noise = 0.0
             target_ratio = float(np.clip(base_ratio + wave + noise, 0.01, 1.05))
 
             if node.status == "closed":
@@ -200,6 +210,9 @@ class CrowdSimulator:
                 target_ratio = bn.severity
             elif node.id in self._manual_relief:
                 target_ratio = float(np.clip(0.22 + noise * 0.4, 0.12, 0.28))
+            elif not self.randomizer_enabled and node.id in self._prev_occupancy and not self._phase_just_changed:
+                # In strict manual mode, hold existing occupancy steady unless overridden
+                target_ratio = self._prev_occupancy[node.id] / node.capacity
 
             target_occ = round(target_ratio * node.capacity)
             prev_occ = self._prev_occupancy.get(node.id, target_occ)

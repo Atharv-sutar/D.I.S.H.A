@@ -77,3 +77,26 @@ def test_simulator_clear_bottleneck_relieves_even_during_ingress_surge() -> None
         gate = next(n for n in snap.nodes if n.node_id == "gate_1_cubbon")
         assert gate.congestion_score < 0.35
         assert gate.status == "optimal"
+
+
+def test_simulator_manual_mode_disables_random_drift() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="in_play", randomizer_enabled=False)
+    snap1 = sim.step()
+    snap2 = sim.step()
+    snap3 = sim.step()
+
+    scores1 = {n.node_id: n.congestion_score for n in snap1.nodes}
+    scores2 = {n.node_id: n.congestion_score for n in snap2.nodes}
+    scores3 = {n.node_id: n.congestion_score for n in snap3.nodes}
+    assert scores1 == scores2 == scores3
+
+    # Manual bottleneck injection still applies immediately in manual mode
+    sim.inject_bottleneck("gate_1_cubbon", severity=0.88)
+    snap4 = sim.step()
+    gate = next(n for n in snap4.nodes if n.node_id == "gate_1_cubbon")
+    assert gate.congestion_score >= 0.87
+
+    # Turning randomizer back on resumes organic fluctuations
+    sim.set_randomizer(True)
+    snap5 = sim.step()
+    assert snap5.nodes != snap4.nodes

@@ -96,12 +96,14 @@ def test_publisher_syncs_control_state_from_backend() -> None:
             east = next(n for n in snap1.nodes if n.node_id == "concession_east_plaza")
             assert east.congestion_score >= 0.80
 
-            # Clear bottleneck in backend control state -> publisher clears it too
+            # Clear bottleneck in backend control state and switch to manual mode
             control_state["bottlenecked_nodes"] = {}
             control_state["event_phase"] = "in_play"
+            control_state["randomizer_enabled"] = False
             snap2, _ = await publisher.publish_tick(client)
             assert snap2.event_phase == "in_play"
             assert "concession_east_plaza" not in publisher.simulator._bottlenecks
+            assert publisher.simulator.randomizer_enabled is False
 
     asyncio.run(_run())
     assert len(ingested) == 2
