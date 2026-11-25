@@ -2,7 +2,7 @@
 
 - **Owner**: Ankit Navi (`Ankit-Navi-8294`)
 - **Module**: `apps/` (`apps/ops-dashboard/`, `apps/fan-app/`, `apps/shared/`)
-- **Last Updated**: 2026-11-25T17:45+05:30
+- **Last Updated**: 2026-11-25T19:20+05:30
 - **Branch**: `main`
 
 ## Current State
@@ -20,7 +20,12 @@
   - **Fan app (`WayfindingMap`)**: rebuilt as a 2D live navigation map with level tabs (`Plaza/L0`, `L1`, `L2`), animated optimal-route path, destination beacon, multi-level transition cues, congestion-coloured zones, click-to-reroute stand sectors/nodes, and a live user avatar/heading cone that follows the walk simulator between levels.
   - **Ops app (`StadiumHeatmap`)**: rebuilt as a 2D live crowd radar with simulated fan particles whose density reflects live telemetry, pulsing halos for unusual gatherings, per-level anomaly badges, a ranked "Unusual Crowd Detection" panel with focus actions, a global gathering banner, active-fan tracking, crowd-particle toggle, and "Pause Sim / Resume Sim", "Simulate Surge", "Clear Crowd" controls wired to `useOpsStream`.
   - Added `evaluateCrowdAnomaly`, `SVG_SCALE`, and `fromSvgPoint` to `apps/shared/lib/congestion.ts`; extended `useOpsStream` with `simPaused`, `simulateCrowdSurge`, and `clearCrowdSurge`.
-- **Verification**: `npm run typecheck`, `npm run lint`, and `npm run build` passed in both `apps/ops-dashboard/` and `apps/fan-app/`; `python .agents/scripts/check_boundaries.py` passed.
+- **Bigger + Interactive Fan Map with Detailed Routing (Latest)**:
+  - Added `apps/shared/lib/routeGeometry.ts`: converts concourse and perimeter-road graph edges into true curved SVG arcs (radius-tested against the Chinnaswamy rings) so routes no longer cut straight chords across stands/the pitch. Exposes `buildWalkGeometry`, `edgePairKey`, surveyed edge lengths, arc length, midpoint and travel heading.
+  - Added `apps/shared/hooks/useMapViewport.ts`: reusable zoom (wheel, buttons, double-click), drag-to-pan with click suppression, clamped viewport, route `fitTo`, reset, and screen-size-locked markers while zoomed.
+  - Reworked `WayfindingMap`: default height raised to `500/620/680px` plus an in-app full-screen mode; zoom/pan/route-fit controls; corridor-style route underlay with animated dashed centre line, direction chevrons and per-segment metre chips; numbered turn markers matching backend `steps`; hover inspector cards with occupancy/queue/wait; level tabs; and live user/destination/stand labels that keep readable at every zoom level.
+  - `StadiumMap2DBase` now accepts `markerScale` so stand names, end labels, road badges and floodlight icons remain crisp and constant-size during zoom; the walkway network itself also renders as curved concourse/perimeter arcs.
+- **Verification**: `npm run typecheck`, `npm run lint`, and `npm run build` passed in both `apps/ops-dashboard/` and `apps/fan-app/`; `python .agents/scripts/check_boundaries.py` passed. Browser-checked the fan 2D map: curved multi-level route, fit-route zoom, wheel zoom, hover tooltip, level switching and full-screen mode.
 
 ## Active Interfaces Consumed
 - `GET /api/v1/venue/topology` -> `StadiumTopology`

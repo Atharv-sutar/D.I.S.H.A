@@ -13,6 +13,11 @@ interface StadiumMap2DBaseProps {
   activeLevel: number | "all";
   selectedNodeId?: string | null;
   showStandLabels?: boolean;
+  /**
+   * Inverse zoom factor for text/dots so labels stay legible and constant
+   * size while the map is zoomed in.
+   */
+  markerScale?: number;
   onSelectStandNode?: (nodeId: string) => void;
 }
 
@@ -52,6 +57,7 @@ export function StadiumMap2DBase({
   activeLevel,
   selectedNodeId,
   showStandLabels = true,
+  markerScale = 1,
   onSelectStandNode,
 }: StadiumMap2DBaseProps) {
   const spec = topology.hologram_spec;
@@ -132,18 +138,18 @@ export function StadiumMap2DBase({
               strokeWidth={isSelected ? 3 : 1.5}
             />
             {showStandLabels && (
-              <text
-                x={lx}
-                y={ly}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={isLevelMatch ? "#94a3b8" : "#475569"}
-                fontSize="11"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                {shortName}
-              </text>
+              <g transform={`translate(${lx} ${ly}) scale(${markerScale})`}>
+                <text
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={isLevelMatch ? "#94a3b8" : "#475569"}
+                  fontSize="13"
+                  fontWeight="600"
+                  pointerEvents="none"
+                >
+                  {shortName}
+                </text>
+              </g>
             )}
           </g>
         );
@@ -198,32 +204,40 @@ export function StadiumMap2DBase({
       {/* End Labels */}
       {spec?.ends && (
         <>
-          <text
-            x="500"
-            y={500 - fieldR + 24}
-            textAnchor="middle"
-            fill="#6ee7b7"
-            fillOpacity="0.7"
-            fontSize="11"
-            fontWeight="600"
-            letterSpacing="1"
+          <g
+            transform={`translate(500 ${
+              500 - fieldR + 24
+            }) scale(${markerScale})`}
             pointerEvents="none"
           >
-            {spec.ends.north_end.toUpperCase()}
-          </text>
-          <text
-            x="500"
-            y={500 + fieldR - 14}
-            textAnchor="middle"
-            fill="#6ee7b7"
-            fillOpacity="0.7"
-            fontSize="11"
-            fontWeight="600"
-            letterSpacing="1"
+            <text
+              textAnchor="middle"
+              fill="#6ee7b7"
+              fillOpacity="0.7"
+              fontSize="13"
+              fontWeight="600"
+              letterSpacing="1"
+            >
+              {spec.ends.north_end.toUpperCase()}
+            </text>
+          </g>
+          <g
+            transform={`translate(500 ${
+              500 + fieldR - 14
+            }) scale(${markerScale})`}
             pointerEvents="none"
           >
-            {spec.ends.south_end.toUpperCase()}
-          </text>
+            <text
+              textAnchor="middle"
+              fill="#6ee7b7"
+              fillOpacity="0.7"
+              fontSize="13"
+              fontWeight="600"
+              letterSpacing="1"
+            >
+              {spec.ends.south_end.toUpperCase()}
+            </text>
+          </g>
         </>
       )}
 
@@ -231,16 +245,18 @@ export function StadiumMap2DBase({
       {(spec?.floodlight_towers ?? []).map((tower) => {
         const { sx, sy } = toSvgPoint(tower.x, tower.y);
         return (
-          <g key={tower.id} pointerEvents="none">
+          <g
+            key={tower.id}
+            transform={`translate(${sx} ${sy}) scale(${markerScale})`}
+            pointerEvents="none"
+          >
             <circle
-              cx={sx}
-              cy={sy}
               r="8"
               fill="#0f172a"
               stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            <circle cx={sx} cy={sy} r="3" fill="#7dd3fc" />
+            <circle r="3" fill="#7dd3fc" />
           </g>
         );
       })}
@@ -251,24 +267,28 @@ export function StadiumMap2DBase({
         const clampedX = Math.max(115, Math.min(885, sx));
         const clampedY = Math.max(24, Math.min(980, sy));
         return (
-          <g key={road.name} pointerEvents="none">
+          <g
+            key={road.name}
+            transform={`translate(${clampedX} ${clampedY}) scale(${markerScale})`}
+            pointerEvents="none"
+          >
             <rect
-              x={clampedX - 72}
-              y={clampedY - 12}
-              width="144"
-              height="22"
-              rx="11"
+              x="-80"
+              y="-13"
+              width="160"
+              height="26"
+              rx="13"
               fill="#0f172a"
               fillOpacity="0.9"
               stroke="#334155"
               strokeWidth="1"
             />
             <text
-              x={clampedX}
-              y={clampedY + 3}
+              x="0"
+              y="4"
               textAnchor="middle"
               fill="#94a3b8"
-              fontSize="10.5"
+              fontSize="12.5"
               fontWeight="600"
               letterSpacing="0.8"
             >
