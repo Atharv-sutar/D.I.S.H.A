@@ -99,6 +99,7 @@ def main() -> int:
 
     dev = ownership["developers"][handle]
     owned_paths: list[str] = dev["owned_paths"]
+    forbidden_paths: list[str] = dev.get("forbidden_paths", [])
     own_status_file: str = dev["status_file"]
     own_directive_file: str = dev.get("directive_file", f".agents/sync/directives/{handle}.md")
     handoffs_dir: str = ownership["shared_coordination"]["handoffs_dir"]
@@ -114,7 +115,11 @@ def main() -> int:
     allowed_files: list[str] = []
 
     for status_code, path in changed:
-        # 1. Hard block: peer owned directories, peer status files, or peer directive files
+        # 1. Hard block: explicit forbidden paths (e.g. simulator lock) or peer owned files
+        if starts_with_any(path, forbidden_paths):
+            peer_violations.append(f"  - {path} (forbidden for {handle})")
+            continue
+
         violated_peer = None
         for other_handle, other_info in ownership["developers"].items():
             if other_handle == handle:

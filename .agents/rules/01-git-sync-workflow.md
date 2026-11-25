@@ -18,7 +18,7 @@ description: "MANDATORY: Always pull latest Git changes before starting any new 
 
 3. **Update Personal Sync Log & Push After Changes**:
    - Update **only** your own `.agents/sync/status/<github-username>.md` summarizing what you built, changed contracts/ports, and any handoffs needed from teammates.
-   - Ensure `git config user.name` reflects the active developer (`Atharv-sutar`, `Shreyas-D-M`, or `Ankit-Navi-8294`).
+   - Ensure `git config user.name` reflects the active developer (`Atharv-sutar` or `Shreyas-D-M`).
    - Commit with a descriptive Conventional Commit message tagged with your username:
      `<type>(<module>): <clear description> [<github-username>]`
    - Always `git push` after completing verified changes (running `git pull --rebase origin main` first if remote advanced). Never leave completed work uncommitted or unpushed unless the user explicitly asks not to push.

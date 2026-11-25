@@ -6,10 +6,11 @@
     "Atharv-sutar": {
       "github_username": "Atharv-sutar",
       "display_name": "Atharv Sutar",
-      "role": "Core Backend & Streaming APIs Lead",
-      "module_id": "backend",
-      "stack": ["Python", "FastAPI", "WebSockets", "Pydantic", "Redis"],
-      "owned_paths": ["services/backend/"],
+      "role": "Core Backend, Streaming APIs, Simulator & Frontend Apps Lead",
+      "module_id": "backend_and_apps",
+      "stack": ["Python", "FastAPI", "WebSockets", "TypeScript", "Next.js", "React", "Three.js"],
+      "owned_paths": ["services/backend/", "apps/"],
+      "forbidden_paths": ["services/intelligence/"],
       "status_file": ".agents/sync/status/Atharv-sutar.md",
       "directive_file": ".agents/sync/directives/Atharv-sutar.md",
       "aliases": ["atharv-sutar", "atharv sutar", "atharv"],
@@ -18,25 +19,21 @@
     "Shreyas-D-M": {
       "github_username": "Shreyas-D-M",
       "display_name": "Shreyas DM",
-      "role": "Congestion, Alert Analytics & Simulation Lead",
+      "role": "Congestion, Alert Analytics & Forecasting Lead",
       "module_id": "intelligence",
-      "stack": ["Python", "NumPy", "NetworkX", "Crowd Simulation", "Anomaly Detection"],
+      "stack": ["Python", "NumPy", "NetworkX", "Anomaly Detection"],
       "owned_paths": ["services/intelligence/"],
+      "forbidden_paths": [
+        "services/backend/",
+        "apps/",
+        "apps/sim-studio/",
+        "services/intelligence/src/disha_intelligence/simulator.py",
+        "services/intelligence/src/disha_intelligence/scenarios.py",
+        "services/intelligence/tests/test_simulator.py"
+      ],
       "status_file": ".agents/sync/status/Shreyas-D-M.md",
       "directive_file": ".agents/sync/directives/Shreyas-D-M.md",
       "aliases": ["shreyas-d-m", "shreyas dm", "shreyas"],
-      "emails": []
-    },
-    "Ankit-Navi-8294": {
-      "github_username": "Ankit-Navi-8294",
-      "display_name": "Ankit Navi",
-      "role": "Frontend Apps Lead (Ops Dashboard + Fan Experience App)",
-      "module_id": "frontend",
-      "stack": ["TypeScript", "Next.js", "React", "Tailwind CSS", "WebSocket Client"],
-      "owned_paths": ["apps/"],
-      "status_file": ".agents/sync/status/Ankit-Navi-8294.md",
-      "directive_file": ".agents/sync/directives/Ankit-Navi-8294.md",
-      "aliases": ["ankit-navi-8294", "ankit navi", "ankit"],
       "emails": []
     }
   },

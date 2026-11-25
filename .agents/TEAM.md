@@ -1,18 +1,17 @@
 # D.I.S.H.A. Team Roster & Isolation Contract
 
-Three developers collaborate via `https://github.com/Atharv-sutar/D.I.S.H.A.`, each owning one strictly isolated technical layer.
+Two developers collaborate via `https://github.com/Atharv-sutar/D.I.S.H.A.`, each owning isolated technical layers.
 
-| GitHub Username | Developer | Module | Owned Folder(s) | Forbidden Folders |
+| GitHub Username | Developer | Module | Owned Folder(s) | Forbidden Folders / Files |
 | :--- | :--- | :--- | :--- | :--- |
-| `Atharv-sutar` | Atharv Sutar | Core Backend & Streaming APIs | `services/backend/` | `services/intelligence/`, `apps/` |
-| `Shreyas-D-M` | Shreyas DM | Congestion/Alert Analytics & Simulation | `services/intelligence/` | `services/backend/`, `apps/` |
-| `Ankit-Navi-8294` | Ankit Navi | Frontend Apps (Ops Dashboard + Fan App) | `apps/` | `services/backend/`, `services/intelligence/` |
+| `Atharv-sutar` | Atharv Sutar | Core Backend, Streaming APIs, Simulator & Frontend Apps | `services/backend/`, `apps/` | `services/intelligence/` |
+| `Shreyas-D-M` | Shreyas DM | Congestion/Alert Analytics & Forecasting | `services/intelligence/` (excluding simulator) | `services/backend/`, `apps/`, `services/intelligence/src/disha_intelligence/simulator.py`, `services/intelligence/src/disha_intelligence/scenarios.py`, `services/intelligence/tests/test_simulator.py` |
 
 ## Synchronization Channels
 
-- **Per-Developer Status Logs** (`.agents/sync/status/<github-username>.md`): Each developer's agent updates **only their own** status file before pushing. Reading all three files keeps every agent informed without merge conflicts.
+- **Per-Developer Status Logs** (`.agents/sync/status/<github-username>.md`): Each developer's agent updates **only their own** status file before pushing. Reading both files keeps every agent informed without merge conflicts.
 - **Contract Handoffs** (`.agents/sync/handoffs/<YYYYMMDD>-<handle>-<topic>.md`): Append-only dated proposals when one layer needs a new API endpoint, WebSocket message, or JSON schema field from another layer.
-- **Shared Contracts** (`contracts/`): Canonical JSON schemas and endpoint docs shared across all three modules.
+- **Shared Contracts** (`contracts/`): Canonical JSON schemas and endpoint docs shared across modules.
 
 ## Git Commit & Push Rules
 

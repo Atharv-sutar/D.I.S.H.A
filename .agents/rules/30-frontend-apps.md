@@ -1,12 +1,12 @@
 ---
 trigger: glob
 globs: "apps/**"
-description: "Engineering guidelines for Ankit-Navi-8294's Frontend Apps (3D Hologram Stadium UI, Operations Dashboard, Fan Navigation App)."
+description: "Engineering guidelines for Atharv-sutar's Frontend Apps (3D Stadium Map, Operations Dashboard, Fan Guide, Simulator Studio)."
 ---
 
 # Frontend Apps Rules (`apps/`)
 
-- **Owner**: `Ankit-Navi-8294` (Ankit Navi)
+- **Owner**: `Atharv-sutar` (Atharv Sutar)
 - **Sub-Apps**:
   - `apps/ops-dashboard/` — 3D Hologram Operations Command Center (live holographic stadium congestion, pulsing 3D incident beacons, queue monitors, incident dispatch).
   - `apps/fan-app/` — 3D Hologram Fan Navigation App (exact user 3D location marker, sci-fi wireframe M. Chinnaswamy Stadium hologram, game-style animated 3D waypoint trail & destination beacon).

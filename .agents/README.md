@@ -1,7 +1,7 @@
 # `.agents/` — Shared Antigravity Configuration & Multi-Agent Sync Hub
 
-This directory configures **Antigravity IDE** across all three developer laptops so every agent automatically:
-1. Detects which developer (`Atharv-sutar`, `Shreyas-D-M`, `Ankit-Navi-8294`) is currently operating.
+This directory configures **Antigravity IDE** across both developer laptops so every agent automatically:
+1. Detects which developer (`Atharv-sutar`, `Shreyas-D-M`) is currently operating.
 2. Enforces strict directory boundaries so no developer edits another developer's codebase.
 3. Reads teammates' latest progress and API/contract handoffs from Git.
 4. Verifies boundaries and pushes clean, attributed commits after completing changes.

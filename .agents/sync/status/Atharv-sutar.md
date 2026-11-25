@@ -1,7 +1,7 @@
 # Developer Status — `Atharv-sutar` (Core Backend & Streaming APIs)
 
 - **Owner**: Atharv Sutar (`Atharv-sutar`)
-- **Module**: `services/backend/` (plus user-authorized one-time override for 3D Hologram integration in `apps/`)
+- **Module**: `services/backend/`, `apps/` (`ops-dashboard`, `fan-app`, `sim-studio`, `shared`)
 - **Last Updated**: 2026-11-25
 - **Branch**: `main`
 

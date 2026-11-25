@@ -20,9 +20,8 @@ Follow this checklist after finishing any meaningful code or documentation chang
    If any file inside another developer's directory is modified, stop and revert or move it before committing.
 
 2. **Run Module Checks / Tests**:
-   - `Atharv-sutar` (`services/backend/`): run `python -m unittest discover -s services/backend/tests -v` (or `pytest`).
-   - `Shreyas-D-M` (`services/intelligence/`): run `pytest` inside `services/intelligence`.
-   - `Ankit-Navi-8294` (`apps/`): run typecheck/lint/build inside `apps/ops-dashboard` and `apps/fan-app`.
+   - `Atharv-sutar` (`services/backend/`, `apps/`): run `python -m unittest discover -s services/backend/tests -v` and `npm run typecheck && npm run lint && npm run build` inside `apps/ops-dashboard`, `apps/fan-app`, and `apps/sim-studio`.
+   - `Shreyas-D-M` (`services/intelligence/`, excluding simulator files): run `pytest` inside `services/intelligence`.
 
 3. **Update Your Personal Sync Status & Directive Queue**:
    Update **only** your own `.agents/sync/status/<your-github-handle>.md` and `.agents/sync/directives/<your-github-handle>.md` (mark completed items `[DONE]`) with:

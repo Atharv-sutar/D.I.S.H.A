@@ -16,7 +16,7 @@ Run this workflow **before starting any new task**, when opening the workspace, 
    ```bash
    python .agents/scripts/identify_dev.py --pull
    ```
-   - If the output reports `UNKNOWN`, check `git config user.name` and ask the user which of `Atharv-sutar`, `Shreyas-D-M`, or `Ankit-Navi-8294` they are, then run:
+   - If the output reports `UNKNOWN`, check `git config user.name` and ask the user which of `Atharv-sutar` or `Shreyas-D-M` they are, then run:
      `git config user.name "<github-handle>"` and `git config user.email "<email>"`.
    - If `--pull` warns about a dirty working tree while `origin/main` is ahead, coordinate with the user to stash or commit before starting the new task so `git pull --rebase origin main` succeeds cleanly.
 
