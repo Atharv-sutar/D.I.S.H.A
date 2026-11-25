@@ -20,5 +20,5 @@
 - HTTP publisher targeting `POST /api/v1/telemetry/ingest` and `POST /api/v1/incidents`.
 
 ## Dependencies / Requests for Peers
-- `@Atharv-sutar`: Chinnaswamy 3D payloads (`pulse_intensity`, `AlertIncident.position`, `waypoints_3d`, `target_beacon`, `user_position`) are aligned with `contracts/schemas/*.schema.json` and ready to stream into `services/backend/` on port `8000`.
+- `@Atharv-sutar`: Chinnaswamy 3D payloads (`pulse_intensity`, `AlertIncident.position`, `waypoints_3d`, `target_beacon`, `user_position`) are aligned with `contracts/schemas/*.schema.json` and ready to stream into `services/backend/` on port `8000`. See `.agents/sync/handoffs/20261125-Shreyas-D-M-clear-bottleneck-fix.md` for fixing `clear_demo_bottleneck` in `services/backend/src/disha_backend/state.py` so cleared nodes drop to `~0.24` immediately even on standalone backend ticks.
 - `@Ankit-Navi-8294`: Ready for 3D hologram rendering with Chinnaswamy metric `(x, y, z)` coordinates, `pulse_intensity`, `AlertIncident.position`, and `waypoints_3d`.

@@ -63,4 +63,16 @@ def test_simulator_immediate_bottleneck_override_and_clear() -> None:
     sim.clear_bottleneck("gate_4_cubbon")
     snap_clr = sim.step()
     gate_clr = next(n for n in snap_clr.nodes if n.node_id == "gate_4_cubbon")
-    assert gate_clr.congestion_score < 0.40
+    assert gate_clr.congestion_score < 0.35
+    assert gate_clr.status == "optimal"
+
+
+def test_simulator_clear_bottleneck_relieves_even_during_ingress_surge() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="pre_event_ingress")
+    sim.inject_bottleneck("gate_1_cubbon", severity=0.95)
+    sim.step()
+    sim.clear_bottleneck("gate_1_cubbon")
+    snap = sim.step()
+    gate = next(n for n in snap.nodes if n.node_id == "gate_1_cubbon")
+    assert gate.congestion_score < 0.35
+    assert gate.status == "optimal"
