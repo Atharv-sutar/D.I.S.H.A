@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/fan_guidance.schema.json",
+  "title": "FanGuidanceResponse",
+  "description": "Optimal entrance/facility recommendation and congestion-aware wayfinding route for fans.",
+  "type": "object",
+  "required": [
+    "venue_id",
+    "generated_at",
+    "origin_node_id",
+    "destination_node_id",
+    "recommended_target_id",
+    "estimated_total_min",
+    "estimated_wait_min",
+    "estimated_walk_min",
+    "time_saved_min",
+    "route_node_ids",
+    "steps",
+    "alternatives"
+  ],
+  "properties": {
+    "venue_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "origin_node_id": { "type": "string" },
+    "destination_node_id": { "type": "string" },
+    "recommended_target_id": { "type": "string" },
+    "estimated_total_min": { "type": "number", "minimum": 0 },
+    "estimated_wait_min": { "type": "number", "minimum": 0 },
+    "estimated_walk_min": { "type": "number", "minimum": 0 },
+    "time_saved_min": { "type": "number", "minimum": 0 },
+    "accessible_only": { "type": "boolean", "default": false },
+    "route_node_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["order", "node_id", "instruction", "distance_m"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "node_id": { "type": "string" },
+          "instruction": { "type": "string" },
+          "distance_m": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "name", "estimated_wait_min", "congestion_score"],
+        "properties": {
+          "node_id": { "type": "string" },
+          "name": { "type": "string" },
+          "estimated_wait_min": { "type": "number", "minimum": 0 },
+          "congestion_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}

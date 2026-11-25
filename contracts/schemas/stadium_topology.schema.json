@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/stadium_topology.schema.json",
+  "title": "StadiumTopology",
+  "description": "Canonical stadium graph model containing navigable zones, gates, facilities, and walkway edges.",
+  "type": "object",
+  "required": ["venue_id", "venue_name", "levels", "nodes", "edges"],
+  "properties": {
+    "venue_id": { "type": "string", "minLength": 1 },
+    "venue_name": { "type": "string", "minLength": 1 },
+    "capacity": { "type": "integer", "minimum": 1 },
+    "levels": {
+      "type": "array",
+      "items": { "type": "integer" }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type", "level", "x", "y", "capacity"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["gate", "concourse", "concession", "restroom", "medical", "seating_section", "transit"]
+          },
+          "level": { "type": "integer" },
+          "x": { "type": "number", "description": "Normalized 0-1000 map X coordinate" },
+          "y": { "type": "number", "description": "Normalized 0-1000 map Y coordinate" },
+          "capacity": { "type": "integer", "minimum": 1 },
+          "accessible": { "type": "boolean", "default": true },
+          "status": {
+            "type": "string",
+            "enum": ["open", "congested", "restricted", "closed"],
+            "default": "open"
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from_node", "to_node", "distance_m", "width_m"],
+        "properties": {
+          "id": { "type": "string" },
+          "from_node": { "type": "string" },
+          "to_node": { "type": "string" },
+          "distance_m": { "type": "number", "minimum": 0 },
+          "width_m": { "type": "number", "minimum": 0.5 },
+          "accessible": { "type": "boolean", "default": true },
+          "bidirectional": { "type": "boolean", "default": true }
+        }
+      }
+    }
+  }
+}

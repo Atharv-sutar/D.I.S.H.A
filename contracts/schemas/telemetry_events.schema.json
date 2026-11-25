@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Atharv-sutar/D.I.S.H.A./contracts/schemas/telemetry_events.schema.json",
+  "title": "TelemetrySnapshot",
+  "description": "Real-time crowd density, queue length, and wait-time snapshot across stadium nodes.",
+  "type": "object",
+  "required": ["venue_id", "timestamp", "event_phase", "nodes"],
+  "properties": {
+    "venue_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "event_phase": {
+      "type": "string",
+      "enum": ["pre_event_ingress", "in_play", "halftime_surge", "egress", "idle"]
+    },
+    "total_attendance_estimate": { "type": "integer", "minimum": 0 },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "occupancy",
+          "capacity",
+          "congestion_score",
+          "queue_length",
+          "estimated_wait_min",
+          "flow_rate_per_min",
+          "status"
+        ],
+        "properties": {
+          "node_id": { "type": "string" },
+          "occupancy": { "type": "integer", "minimum": 0 },
+          "capacity": { "type": "integer", "minimum": 1 },
+          "congestion_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized congestion index from 0.0 (free-flowing) to 1.0 (gridlock)"
+          },
+          "queue_length": { "type": "integer", "minimum": 0 },
+          "estimated_wait_min": { "type": "number", "minimum": 0 },
+          "flow_rate_per_min": { "type": "number", "minimum": 0 },
+          "trend": { "type": "string", "enum": ["rising", "stable", "falling"] },
+          "status": {
+            "type": "string",
+            "enum": ["optimal", "moderate", "high", "critical", "closed"]
+          }
+        }
+      }
+    }
+  }
+}

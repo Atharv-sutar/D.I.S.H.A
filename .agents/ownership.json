@@ -1,0 +1,62 @@
+{
+  "project": "D.I.S.H.A.",
+  "repository": "https://github.com/Atharv-sutar/D.I.S.H.A.",
+  "default_branch": "main",
+  "developers": {
+    "Atharv-sutar": {
+      "github_username": "Atharv-sutar",
+      "display_name": "Atharv Sutar",
+      "role": "Core Backend & Streaming APIs Lead",
+      "module_id": "backend",
+      "stack": ["Python", "FastAPI", "WebSockets", "Pydantic", "Redis"],
+      "owned_paths": ["services/backend/"],
+      "status_file": ".agents/sync/status/Atharv-sutar.md",
+      "aliases": ["atharv-sutar", "atharv sutar", "atharv"],
+      "emails": ["atharvsutar270@gmail.com"]
+    },
+    "Shreyas-D-M": {
+      "github_username": "Shreyas-D-M",
+      "display_name": "Shreyas DM",
+      "role": "Congestion, Alert Analytics & Simulation Lead",
+      "module_id": "intelligence",
+      "stack": ["Python", "NumPy", "NetworkX", "Crowd Simulation", "Anomaly Detection"],
+      "owned_paths": ["services/intelligence/"],
+      "status_file": ".agents/sync/status/Shreyas-D-M.md",
+      "aliases": ["shreyas-d-m", "shreyas dm", "shreyas"],
+      "emails": []
+    },
+    "Ankit-Navi-8294": {
+      "github_username": "Ankit-Navi-8294",
+      "display_name": "Ankit Navi",
+      "role": "Frontend Apps Lead (Ops Dashboard + Fan Experience App)",
+      "module_id": "frontend",
+      "stack": ["TypeScript", "Next.js", "React", "Tailwind CSS", "WebSocket Client"],
+      "owned_paths": ["apps/"],
+      "status_file": ".agents/sync/status/Ankit-Navi-8294.md",
+      "aliases": ["ankit-navi-8294", "ankit navi", "ankit"],
+      "emails": []
+    }
+  },
+  "shared_coordination": {
+    "handoffs_dir": ".agents/sync/handoffs/",
+    "contracts_dir": "contracts/",
+    "docs_dir": "docs/",
+    "protected_shared_paths": [
+      "contracts/",
+      "docs/",
+      ".agents/rules/",
+      ".agents/skills/",
+      ".agents/scripts/",
+      ".agents/ownership.json",
+      ".agents/TEAM.md",
+      ".agents/README.md",
+      ".agents/sync/README.md",
+      ".github/",
+      "AGENTS.md",
+      "GEMINI.md",
+      "README.md",
+      ".gitignore",
+      ".gitattributes"
+    ]
+  }
+}

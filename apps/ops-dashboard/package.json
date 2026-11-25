@@ -1,0 +1,13 @@
+{
+  "name": "@disha/ops-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "D.I.S.H.A. Stadium Operations Command Center",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  }
+}

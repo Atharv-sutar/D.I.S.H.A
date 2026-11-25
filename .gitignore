@@ -1,0 +1,54 @@
+# Operating System & Editors
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Local Agent Developer Override (per-laptop only)
+.agents/.local-dev
+.agents/scripts/__pycache__/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Python (services/backend & services/intelligence)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+build/
+dist/
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js / React (apps/)
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs & Temporary Data
+*.log
+logs/
+tmp/
+temp/

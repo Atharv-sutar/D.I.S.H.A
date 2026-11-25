@@ -1,0 +1,20 @@
+# D.I.S.H.A. Module Ownership (Enforced on GitHub & by Antigravity .agents/)
+
+# Core Backend & Streaming APIs
+/services/backend/             @Atharv-sutar
+
+# Congestion / Alert Analytics & Simulation
+/services/intelligence/        @Shreyas-D-M
+
+# Frontend Apps (Operations Dashboard & Fan Navigation App)
+/apps/                         @Ankit-Navi-8294
+
+# Per-Developer Sync Status Logs
+/.agents/sync/status/Atharv-sutar.md      @Atharv-sutar
+/.agents/sync/status/Shreyas-D-M.md       @Shreyas-D-M
+/.agents/sync/status/Ankit-Navi-8294.md   @Ankit-Navi-8294
+
+# Shared Contracts, Architecture Docs & Agent Config
+/contracts/                    @Atharv-sutar @Shreyas-D-M @Ankit-Navi-8294
+/docs/                         @Atharv-sutar @Shreyas-D-M @Ankit-Navi-8294
+/.agents/                      @Atharv-sutar @Shreyas-D-M @Ankit-Navi-8294

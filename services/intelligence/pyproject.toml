@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "disha-intelligence"
+version = "0.1.0"
+description = "Real-time Crowd Simulation, Congestion Scoring, Routing & Alert Engine for D.I.S.H.A."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.9.0",
+  "numpy>=2.1.0",
+  "networkx>=3.4.0",
+  "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.7.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
