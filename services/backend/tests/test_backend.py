@@ -245,6 +245,38 @@ class BackendFoundationTests(unittest.TestCase):
         status, sim_status = _run_asgi_request(self.app, "GET", "/api/v1/simulation/status")
         self.assertEqual(status, 200)
         self.assertEqual(sim_status["venue_id"], "chinnaswamy_bengaluru")
+        self.assertTrue(sim_status["randomizer_enabled"])
+
+        status, manual_mode = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/mode",
+            body={"randomizer_enabled": False},
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(manual_mode["randomizer_enabled"])
+        self.assertEqual(manual_mode["control_mode"], "manual")
+
+        status, step_before = _run_asgi_request(self.app, "POST", "/api/v1/demo/step")
+        self.assertEqual(status, 200)
+        before_score = next(
+            n["congestion_score"] for n in step_before["nodes"] if n["node_id"] == "gate_9_mg"
+        )
+        status, step_after = _run_asgi_request(self.app, "POST", "/api/v1/demo/step")
+        self.assertEqual(status, 200)
+        after_score = next(
+            n["congestion_score"] for n in step_after["nodes"] if n["node_id"] == "gate_9_mg"
+        )
+        self.assertEqual(before_score, after_score)
+
+        status, rand_mode = _run_asgi_request(
+            self.app,
+            "POST",
+            "/api/v1/simulation/mode",
+            body={"mode": "randomized"},
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(rand_mode["randomizer_enabled"])
 
         status, preset_snap = _run_asgi_request(
             self.app,

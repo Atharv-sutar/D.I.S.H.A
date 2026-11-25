@@ -63,3 +63,15 @@ class IntelligenceClient:
         return await asyncio.to_thread(
             self._request_sync, "POST", "/simulation/bottleneck", payload
         )
+
+    async def set_randomizer(self, enabled: bool) -> dict[str, Any] | None:
+        """Forward randomizer/manual control mode toggle to /simulation/mode."""
+        return await asyncio.to_thread(
+            self._request_sync,
+            "POST",
+            "/simulation/mode",
+            {
+                "randomizer_enabled": enabled,
+                "mode": "randomized" if enabled else "manual",
+            },
+        )

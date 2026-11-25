@@ -454,6 +454,13 @@ class SimulationPresetRequest(BaseModel):
     preset: SimulationPresetName
 
 
+class SimulationModeRequest(BaseModel):
+    """Request to toggle randomized crowd waves vs. strict manual control."""
+
+    randomizer_enabled: Optional[bool] = None
+    mode: Optional[Literal["randomized", "manual"]] = None
+
+
 class SimulationStatusResponse(BaseModel):
     """Current simulator control state for Simulator Studio UI."""
 
@@ -462,3 +469,5 @@ class SimulationStatusResponse(BaseModel):
     tick_count: int
     bottlenecked_nodes: dict[str, float]
     active_incident_count: int
+    randomizer_enabled: bool = True
+    control_mode: Literal["randomized", "manual"] = "randomized"

@@ -30,6 +30,7 @@ from disha_backend.models import (
     NodeType,
     OpsOverviewResponse,
     RouteMode,
+    SimulationModeRequest,
     SimulationPhaseRequest,
     SimulationPresetRequest,
     SimulationStatusResponse,
@@ -372,6 +373,32 @@ def create_app() -> FastAPI:
             tick_count=store._tick_count,
             bottlenecked_nodes=dict(store._bottleneck_overrides),
             active_incident_count=len(store.list_incidents(include_resolved=False)),
+            randomizer_enabled=store.randomizer_enabled,
+            control_mode="randomized" if store.randomizer_enabled else "manual",
+        )
+
+    @application.post("/api/v1/simulation/mode", response_model=SimulationStatusResponse, tags=["simulation"])
+    async def set_simulation_mode(req: SimulationModeRequest) -> SimulationStatusResponse:
+        """Toggle randomized crowd waves vs. strict manual control mode."""
+        if req.randomizer_enabled is not None:
+            enabled = bool(req.randomizer_enabled)
+        elif req.mode is not None:
+            enabled = req.mode == "randomized"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide randomizer_enabled (bool) or mode ('randomized' | 'manual').",
+            )
+        store.set_randomizer(enabled)
+        await intel_client.set_randomizer(enabled)
+        return SimulationStatusResponse(
+            venue_id=store.topology.venue_id,
+            event_phase=store.latest_telemetry.event_phase,
+            tick_count=store._tick_count,
+            bottlenecked_nodes=dict(store._bottleneck_overrides),
+            active_incident_count=len(store.list_incidents(include_resolved=False)),
+            randomizer_enabled=store.randomizer_enabled,
+            control_mode="randomized" if store.randomizer_enabled else "manual",
         )
 
     @application.post("/api/v1/simulation/reset", response_model=TelemetrySnapshot, tags=["simulation"])

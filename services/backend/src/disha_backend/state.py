@@ -47,6 +47,7 @@ class StadiumStateStore:
         self.topology = topology
         self.node_map = {n.id: n for n in topology.nodes}
         self._tick_count = 0
+        self.randomizer_enabled: bool = True
         self._last_external_ingest_monotonic: float = 0.0
         self._bottleneck_overrides: dict[str, float] = {}
         self._history: deque[TelemetrySnapshot] = deque(maxlen=12)
@@ -243,6 +244,11 @@ class StadiumStateStore:
         """Store an externally produced telemetry snapshot and attach active incident beacons."""
         return self._apply_snapshot(snapshot, mark_external=True)
 
+    def set_randomizer(self, enabled: bool) -> bool:
+        """Enable or disable organic crowd wave fluctuations in demo telemetry."""
+        self.randomizer_enabled = bool(enabled)
+        return self.randomizer_enabled
+
     def set_demo_phase(self, phase: EventPhase) -> TelemetrySnapshot:
         """Switch demo event phase immediately when running standalone."""
         return self.step_demo_telemetry(phase=phase)
@@ -387,6 +393,8 @@ class StadiumStateStore:
             node = self.node_map.get(prev.node_id)
             if prev.node_id in self._bottleneck_overrides:
                 next_score = self._bottleneck_overrides[prev.node_id]
+            elif not self.randomizer_enabled:
+                next_score = prev.congestion_score
             else:
                 wave = 0.035 * math.sin((self._tick_count + idx) * 0.7)
                 type_bias = phase_bias if (node and node.type in ("gate", "concession", "concourse")) else 0.0
