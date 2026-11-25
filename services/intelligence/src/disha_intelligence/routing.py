@@ -37,13 +37,24 @@ class WayfindingEngine:
         telemetry_map: dict[str, NodeTelemetry],
         accessible_only: bool,
         walking_speed_mps: float,
+        avoid_surged_gates: bool = True,
+        allowed_surged_ids: set[str] | None = None,
     ) -> nx.DiGraph:
+        allowed = allowed_surged_ids or set()
         graph = nx.DiGraph()
         for node in self.topology.nodes:
             tel = telemetry_map.get(node.id)
             if node.status == "closed" or (tel and tel.status == "closed"):
                 continue
             if accessible_only and not node.accessible:
+                continue
+            if (
+                avoid_surged_gates
+                and node.type == "gate"
+                and node.id not in allowed
+                and tel is not None
+                and (tel.congestion_score >= 0.80 or tel.status == "critical")
+            ):
                 continue
             graph.add_node(node.id, node=node)
 
@@ -129,7 +140,16 @@ class WayfindingEngine:
 
         telemetry_map = {n.node_id: n for n in snapshot.nodes}
         speed_mps = 1.05 if accessible_only else 1.25
-        graph = self._build_graph(telemetry_map, accessible_only, speed_mps)
+        allowed_surged = {origin_node_id}
+        if target_id is not None:
+            allowed_surged.add(target_id)
+        graph = self._build_graph(
+            telemetry_map,
+            accessible_only,
+            speed_mps,
+            avoid_surged_gates=True,
+            allowed_surged_ids=allowed_surged,
+        )
 
         if origin_node_id not in graph:
             raise ValueError(f"Origin node '{origin_node_id}' is closed or inaccessible")
@@ -149,6 +169,15 @@ class WayfindingEngine:
                 ):
                     continue
                 candidates.append(node)
+
+        if not candidates and resolved_type == "gate":
+            # Fallback if every gate is surged
+            graph = self._build_graph(
+                telemetry_map, accessible_only, speed_mps, avoid_surged_gates=False
+            )
+            candidates = [
+                n for n in self.topology.nodes if n.id in graph and n.type == "gate"
+            ]
 
         if (
             target_id is not None
@@ -183,14 +212,35 @@ class WayfindingEngine:
         evaluated.sort(key=lambda item: item[0])
         best_total, best_walk, best_wait, best_path, best_node = evaluated[0]
 
-        # Baseline: shortest physical-distance candidate (what naive routing would pick)
-        baseline_total = max(
-            evaluated,
-            key=lambda item: -sum(
-                float(graph[item[3][i]][item[3][i + 1]]["distance_m"])
-                for i in range(len(item[3]) - 1)
-            ),
-        )[0]
+        # Baseline: naive shortest-distance candidate (including any surged gate we bypassed)
+        full_graph = self._build_graph(
+            telemetry_map, accessible_only, speed_mps, avoid_surged_gates=False
+        )
+        naive_totals: list[tuple[float, float]] = []
+        for node in self.topology.nodes:
+            if node.id not in full_graph or node.type != resolved_type:
+                continue
+            try:
+                n_path = nx.shortest_path(full_graph, origin_node_id, node.id, weight="distance_m")
+            except nx.NetworkXNoPath:
+                continue
+            n_dist = sum(
+                float(full_graph[n_path[i]][n_path[i + 1]]["distance_m"])
+                for i in range(len(n_path) - 1)
+            )
+            n_walk = sum(
+                float(full_graph[n_path[i]][n_path[i + 1]]["weight"])
+                for i in range(len(n_path) - 1)
+            )
+            n_tel = telemetry_map.get(node.id)
+            n_wait = n_tel.estimated_wait_min if n_tel else 0.0
+            naive_totals.append((n_dist, n_walk + n_wait))
+
+        if naive_totals:
+            naive_totals.sort(key=lambda item: item[0])
+            baseline_total = naive_totals[0][1]
+        else:
+            baseline_total = max(item[0] for item in evaluated)
         time_saved = round(max(0.0, baseline_total - best_total), 2)
 
         steps, waypoints_3d = self._build_steps_and_waypoints(best_path, graph)

@@ -82,3 +82,18 @@ def test_routing_respects_route_mode_entry_and_exit() -> None:
     node_map = {n.id: n for n in sim.topology.nodes}
     assert node_map[entry_res.recommended_target_id].gate_role in ("entry", "entry_exit", None)
     assert node_map[exit_res.recommended_target_id].gate_role in ("exit", "entry_exit", None)
+
+
+def test_routing_to_stand_bypasses_surged_gate() -> None:
+    sim = CrowdSimulator(seed=42, initial_phase="in_play")
+    sim.inject_bottleneck("gate_1_cubbon", severity=0.92)
+    snap = sim.step()
+    engine = WayfindingEngine(sim.topology)
+
+    res = engine.recommend(
+        origin_node_id="transit_cubbon_park_metro",
+        snapshot=snap,
+        target_id="stand_e_lower",
+    )
+    assert "gate_1_cubbon" not in res.route_node_ids
+    assert any(nid.startswith("gate_") for nid in res.route_node_ids)

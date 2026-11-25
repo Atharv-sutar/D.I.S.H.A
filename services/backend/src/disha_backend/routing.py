@@ -72,6 +72,21 @@ def _edge_travel_cost_min(
     return (base_walk_min * penalty) + gate_delay_min
 
 
+def _is_gate_surged(
+    node: StadiumNode,
+    telemetry_map: dict[str, NodeTelemetry],
+    incident_nodes: set[str],
+) -> bool:
+    if node.type != "gate":
+        return False
+    if node.id in incident_nodes:
+        return True
+    telem = telemetry_map.get(node.id)
+    if not telem:
+        return False
+    return telem.congestion_score >= 0.80 or telem.status == "critical"
+
+
 def _shortest_path(
     topology: StadiumTopology,
     origin_id: str,
@@ -80,6 +95,7 @@ def _shortest_path(
     incident_nodes: set[str],
     accessible_only: bool,
     ignore_congestion: bool = False,
+    avoid_surged_gates: bool = True,
 ) -> tuple[list[str], float, float] | None:
     """Return (node_ids, total_distance_m, walk_time_min) or None if unreachable."""
     node_map = {n.id: n for n in topology.nodes}
@@ -100,6 +116,13 @@ def _shortest_path(
         for nxt, edge in adj.get(current, []):
             nxt_node = node_map[nxt]
             if nxt_node.status == "closed":
+                continue
+            if (
+                avoid_surged_gates
+                and not ignore_congestion
+                and nxt != target_id
+                and _is_gate_surged(nxt_node, telemetry_map, incident_nodes)
+            ):
                 continue
             step_cost = _edge_travel_cost_min(
                 edge,
@@ -242,6 +265,12 @@ def recommend_route(
                 candidate_nodes = entry_gates
         if not candidate_nodes:
             raise ValueError(f"No open facilities of type '{desired_type}' found")
+        if desired_type == "gate":
+            non_surged = [
+                n for n in candidate_nodes if not _is_gate_surged(n, telemetry_map, incident_nodes)
+            ]
+            if non_surged:
+                candidate_nodes = non_surged
 
     evaluated: list[tuple[float, float, float, StadiumNode, list[str]]] = []
     for cand in candidate_nodes:
@@ -253,7 +282,19 @@ def recommend_route(
             incident_nodes,
             accessible_only=accessible_only,
             ignore_congestion=False,
+            avoid_surged_gates=True,
         )
+        if not res:
+            res = _shortest_path(
+                topology,
+                origin_node_id,
+                cand.id,
+                telemetry_map,
+                incident_nodes,
+                accessible_only=accessible_only,
+                ignore_congestion=False,
+                avoid_surged_gates=False,
+            )
         if not res:
             continue
         path, _, walk_min = res
