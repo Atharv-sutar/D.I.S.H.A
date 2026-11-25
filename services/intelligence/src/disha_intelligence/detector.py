@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from disha_intelligence.forecaster import NodeForecast
 from disha_intelligence.models import (
     AlertIncident,
     IncidentCategory,
@@ -31,10 +32,15 @@ class IncidentDetector:
         self._prev_nodes: dict[str, NodeTelemetry] = {}
         self._counter = 0
 
-    def analyze(self, snapshot: TelemetrySnapshot) -> list[AlertIncident]:
-        """Inspect a TelemetrySnapshot and return newly detected AlertIncidents."""
+    def analyze(
+        self,
+        snapshot: TelemetrySnapshot,
+        forecasts: list[NodeForecast] | None = None,
+    ) -> list[AlertIncident]:
+        """Inspect a TelemetrySnapshot (and optional forecasts) for AlertIncidents."""
         incidents: list[AlertIncident] = []
         now = snapshot.timestamp.astimezone(UTC)
+        forecast_map = {f.node_id: f for f in forecasts} if forecasts else {}
 
         for node_tel in snapshot.nodes:
             if node_tel.status == "closed":
@@ -45,8 +51,9 @@ class IncidentDetector:
             node_name = topo_node.name if topo_node else node_tel.node_id
             node_type = topo_node.type if topo_node else "concourse"
             prev = self._prev_nodes.get(node_tel.node_id)
+            forecast = forecast_map.get(node_tel.node_id)
 
-            detected = self._evaluate_node(node_tel, prev, node_name, node_type)
+            detected = self._evaluate_node(node_tel, prev, node_name, node_type, forecast)
             for category, severity, confidence, title, description, action in detected:
                 key = (node_tel.node_id, category)
                 last_time = self._last_alert_time.get(key)
@@ -81,6 +88,7 @@ class IncidentDetector:
         prev: NodeTelemetry | None,
         node_name: str,
         node_type: str,
+        forecast: NodeForecast | None = None,
     ) -> list[tuple[IncidentCategory, IncidentSeverity, float, str, str, str]]:
         findings: list[tuple[IncidentCategory, IncidentSeverity, float, str, str, str]] = []
 
@@ -139,6 +147,25 @@ class IncidentDetector:
                         f"(congestion {curr.congestion_score:.2f}, trend {curr.trend or 'stable'})."
                     ),
                     f"Activate one-way flow control around {node_name} and update fan wayfinding.",
+                )
+            )
+
+        # 4. Predictive early-warning from +5m/+10m forecast
+        elif forecast is not None and forecast.will_breach_critical and curr.congestion_score >= 0.55:
+            category: IncidentCategory = (
+                "queue_surge" if node_type in ("gate", "concession", "restroom") else "crowd_bottleneck"
+            )
+            findings.append(
+                (
+                    category,
+                    "medium",
+                    0.68,
+                    f"Predicted Surge at {node_name}",
+                    (
+                        f"Current congestion {curr.congestion_score:.2f} is projected to reach "
+                        f"{forecast.predicted_5m_congestion:.2f} within 5 minutes."
+                    ),
+                    f"Pre-stage staff at {node_name} and enable proactive fan rerouting.",
                 )
             )
 

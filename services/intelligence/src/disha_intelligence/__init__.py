@@ -17,6 +17,7 @@ from disha_intelligence.scenarios import (
     ScenarioSpec,
     build_scenario_simulator,
 )
+from disha_intelligence.server import IntelligenceRuntime, create_server
 from disha_intelligence.simulator import CrowdSimulator
 from disha_intelligence.topology import build_default_topology
 
@@ -29,6 +30,7 @@ __all__ = [
     "CrowdSimulator",
     "FanGuidanceResponse",
     "IncidentDetector",
+    "IntelligenceRuntime",
     "NodeForecast",
     "NodeTelemetry",
     "PublisherConfig",
@@ -41,4 +43,5 @@ __all__ = [
     "build_default_topology",
     "build_scenario_simulator",
     "compute_congestion_score",
+    "create_server",
 ]

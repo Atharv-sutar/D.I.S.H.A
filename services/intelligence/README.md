@@ -29,6 +29,14 @@ python -m disha_intelligence.publisher --scenario halftime_rush --ticks 3 --dry-
 python -m disha_intelligence.publisher --scenario matchday_ingress
 ```
 
+## Running the Intelligence HTTP Server (Port 8001)
+
+```bash
+python -m disha_intelligence.server --scenario matchday_ingress --port 8001
+```
+
+Exposes `/health`, `/topology`, `/telemetry/latest`, `/forecast`, `/routing/recommend`, `/simulation/step`, `/simulation/phase`, and `/simulation/bottleneck`.
+
 ## Running Tests & Lint
 
 ```bash
