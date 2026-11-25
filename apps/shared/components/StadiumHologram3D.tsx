@@ -22,6 +22,7 @@ import type {
   UserPosition3D,
 } from "../types/contracts";
 import { getCongestionVisuals } from "../lib/congestion";
+import type { DetectedSeatLocation } from "../lib/seatMapper";
 import {
   HologramSceneContent,
   type CameraPreset,
@@ -35,6 +36,7 @@ export interface StadiumHologram3DProps {
   incidents: AlertIncident[];
   guidance?: FanGuidanceResponse | null;
   userPosition?: UserPosition3D | null;
+  seatLocation?: DetectedSeatLocation | null;
   activeFans?: UserPosition3D[];
   selectedNodeId?: string | null;
   heightClassName?: string;
@@ -53,7 +55,7 @@ const LAYER_TABS: { id: HologramLayerFilter; label: string }[] = [
 ];
 
 const CAMERA_BUTTONS: { id: CameraPreset; label: string }[] = [
-  { id: "aerial", label: "Aerial" },
+  { id: "aerial", label: "Reset View" },
   { id: "follow_me", label: "My Location" },
   { id: "top_down", label: "Top-Down" },
   { id: "pitch_view", label: "Pitch View" },
@@ -66,6 +68,7 @@ export function StadiumHologram3D({
   incidents,
   guidance,
   userPosition,
+  seatLocation,
   activeFans,
   selectedNodeId,
   heightClassName = "h-[460px] sm:h-[540px]",
@@ -224,6 +227,7 @@ export function StadiumHologram3D({
               incidents={incidents}
               guidance={guidance}
               userPosition={userPosition}
+              seatLocation={seatLocation}
               activeFans={activeFans}
               selectedNodeId={selectedNodeId}
               layerFilter={layerFilter}
@@ -252,6 +256,9 @@ export function StadiumHologram3D({
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-400" /> Exit / Waypoint
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-300" /> My Seat
           </span>
         </div>
 

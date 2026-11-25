@@ -1,9 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Box, Map as MapIcon } from "lucide-react";
 import { useFanStream } from "@shared/hooks/useFanStream";
+import { useWalkSimulator } from "@shared/hooks/useWalkSimulator";
+import {
+  parseSeatTicket,
+  type DetectedSeatLocation,
+} from "@shared/lib/seatMapper";
+import type { UserPosition3D, Waypoint3D } from "@shared/types/contracts";
 import type { RoutingQueryParams } from "@shared/types/ws";
 import { FanHeader } from "@/components/FanHeader";
 import { AdvisoryBanner } from "@/components/AdvisoryBanner";
@@ -28,8 +34,9 @@ const StadiumHologram3D = dynamic(
 
 const INITIAL_QUERY: RoutingQueryParams = {
   origin: "transit_cubbon_park_metro",
-  target_type: "gate",
-  route_mode: "entry",
+  target_type: "seating_section",
+  target_id: "stand_e_lower",
+  route_mode: "facility",
   accessible: false,
 };
 
@@ -37,8 +44,10 @@ export default function FanAppPage() {
   const [params, setParams] = useState<RoutingQueryParams>(INITIAL_QUERY);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
-    "gate_18_queens"
+    "stand_e_lower"
   );
+  const [seatError, setSeatError] = useState<string | null>(null);
+  const [seatedAtSeat, setSeatedAtSeat] = useState(false);
 
   const {
     topology,
@@ -53,12 +62,98 @@ export default function FanAppPage() {
     connectionStatus,
     lastUpdatedAt,
     requestGuidance,
+    setLiveUserPosition,
     setUserCoordinates,
   } = useFanStream(INITIAL_QUERY);
 
-  const handleParamsChange = (next: RoutingQueryParams) => {
-    setParams(next);
-    void requestGuidance(next);
+  const [detectedSeat, setDetectedSeat] = useState<DetectedSeatLocation | null>(
+    () => parseSeatTicket("E-12-45", topology)
+  );
+
+  const handleParamsChange = useCallback(
+    (next: RoutingQueryParams) => {
+      setParams(next);
+      void requestGuidance(next);
+    },
+    [requestGuidance]
+  );
+
+  const waypoints = useMemo(() => guidance?.waypoints_3d ?? [], [guidance]);
+
+  const handleArrive = useCallback(
+    (finalWp: Waypoint3D, pos: UserPosition3D) => {
+      const arrivedAtSeat =
+        detectedSeat !== null && finalWp.node_id === detectedSeat.standNodeId;
+
+      if (arrivedAtSeat && detectedSeat) {
+        setSeatedAtSeat(true);
+        const seatPos: UserPosition3D = {
+          x: detectedSeat.x,
+          y: detectedSeat.y,
+          z: detectedSeat.z,
+          level: detectedSeat.level,
+          heading_deg: pos.heading_deg ?? 0,
+          snapped_node_id: detectedSeat.standNodeId,
+        };
+        setLiveUserPosition(seatPos);
+        setParams((prev) => ({
+          ...prev,
+          origin: detectedSeat.standNodeId,
+          user_x: detectedSeat.x,
+          user_y: detectedSeat.y,
+          user_z: detectedSeat.z,
+          user_level: detectedSeat.level,
+        }));
+      } else {
+        setLiveUserPosition(pos);
+        setParams((prev) => ({
+          ...prev,
+          origin: finalWp.node_id,
+          user_x: pos.x,
+          user_y: pos.y,
+          user_z: pos.z,
+          user_level: pos.level,
+        }));
+      }
+    },
+    [detectedSeat, setLiveUserPosition]
+  );
+
+  const walkSim = useWalkSimulator({
+    waypoints,
+    onPositionTick: setLiveUserPosition,
+    onArrive: handleArrive,
+  });
+
+  const handleDetectSeat = (rawSeat: string) => {
+    const parsed = parseSeatTicket(rawSeat, topology);
+    if (!parsed) {
+      setSeatError(
+        "Unrecognized seat format. Try e.g. E-12-45, F1-06-18, H-08-14, B-04-32, A-09-21, or P2-03-10."
+      );
+      return;
+    }
+    setSeatError(null);
+    setDetectedSeat(parsed);
+    setSelectedNodeId(parsed.standNodeId);
+    setSeatedAtSeat(false);
+    handleParamsChange({
+      ...params,
+      target_type: "seating_section",
+      route_mode: "facility",
+      target_id: parsed.standNodeId,
+    });
+  };
+
+  const handleNavigateToSeat = () => {
+    if (!detectedSeat) return;
+    setSelectedNodeId(detectedSeat.standNodeId);
+    handleParamsChange({
+      ...params,
+      target_type: "seating_section",
+      route_mode: "facility",
+      target_id: detectedSeat.standNodeId,
+    });
   };
 
   const handleQuickRouteNode = (nodeId: string) => {
@@ -75,7 +170,10 @@ export default function FanAppPage() {
       handleParamsChange({
         ...params,
         target_type: targetNode.type,
-        route_mode: targetNode.type === "gate" ? params.route_mode ?? "entry" : "facility",
+        route_mode:
+          targetNode.type === "gate"
+            ? params.route_mode ?? "entry"
+            : "facility",
         target_id: targetNode.id,
       });
     }
@@ -120,8 +218,7 @@ export default function FanAppPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-slate-400">
-            Interactive M. Chinnaswamy Stadium Digital Twin — click any node or tap{" "}
-            <strong className="text-cyan-300">Move My Location</strong> to reposition inside the stadium.
+            Interactive M. Chinnaswamy Stadium Digital Twin — enter your seat ticket, walk to your seat, then navigate anywhere from your seat.
           </p>
           <div className="inline-flex rounded-xl border border-slate-800 bg-slate-900 p-1 text-xs">
             <button
@@ -155,7 +252,20 @@ export default function FanAppPage() {
           topology={topology}
           params={params}
           isRouting={isRouting}
+          detectedSeat={detectedSeat}
+          seatError={seatError}
+          seatedAtSeat={seatedAtSeat}
+          walkStatus={walkSim.status}
+          walkProgress={walkSim.progress}
+          walkSpeed={walkSim.speedMultiplier}
+          activeWaypoint={walkSim.activeWaypoint}
           onChangeParams={handleParamsChange}
+          onDetectSeat={handleDetectSeat}
+          onNavigateToSeat={handleNavigateToSeat}
+          onWalkStart={walkSim.startWalk}
+          onWalkPause={walkSim.pauseWalk}
+          onWalkReset={walkSim.resetWalk}
+          onWalkSpeedChange={walkSim.setSpeedMultiplier}
         />
 
         <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
@@ -166,10 +276,14 @@ export default function FanAppPage() {
               incidents={incidents}
               guidance={guidance}
               userPosition={userPosition}
+              seatLocation={detectedSeat}
               selectedNodeId={selectedNodeId}
               heightClassName="h-[480px] sm:h-[560px]"
               onSelectNode={handleQuickRouteNode}
-              onPlaceUser={(x, y, lvl) => void setUserCoordinates(x, y, lvl)}
+              onPlaceUser={(x, y, lvl) => {
+                setSeatedAtSeat(false);
+                void setUserCoordinates(x, y, lvl);
+              }}
               onQuickWaypoint={handleQuickWaypoint}
             />
           ) : (

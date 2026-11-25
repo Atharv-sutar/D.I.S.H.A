@@ -17,6 +17,7 @@ import type {
   UserPosition3D,
   Waypoint3D,
 } from "../../types/contracts";
+import type { DetectedSeatLocation } from "../../lib/seatMapper";
 import { getCongestionVisuals } from "../../lib/congestion";
 
 export type HologramLayerFilter =
@@ -44,6 +45,7 @@ interface HologramSceneContentProps {
   incidents: AlertIncident[];
   guidance?: FanGuidanceResponse | null;
   userPosition?: UserPosition3D | null;
+  seatLocation?: DetectedSeatLocation | null;
   activeFans?: UserPosition3D[];
   selectedNodeId?: string | null;
   layerFilter: HologramLayerFilter;
@@ -509,20 +511,75 @@ function IncidentBeacon3D({
   );
 }
 
+function SeatMarker3D({
+  seat,
+  showLabel,
+}: {
+  seat: DetectedSeatLocation;
+  showLabel: boolean;
+}) {
+  const [sx, sy, sz] = toThree(seat.x, seat.y, seat.z);
+  const pinRef = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (pinRef.current) {
+      const t = clock.getElapsedTime();
+      pinRef.current.rotation.y = t * 1.9;
+      pinRef.current.position.y = 7.5 + Math.sin(t * 3.0) * 0.9;
+    }
+  });
+
+  return (
+    <group position={[sx, sy, sz]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.35, 0]}>
+        <ringGeometry args={[2.5, 4.2, 24]} />
+        <meshBasicMaterial color="#fbbf24" side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 3.8, 0]}>
+        <cylinderGeometry args={[0.35, 0.35, 7.6, 10]} />
+        <meshBasicMaterial color="#f59e0b" transparent opacity={0.85} />
+      </mesh>
+      <mesh ref={pinRef} position={[0, 7.5, 0]}>
+        <octahedronGeometry args={[2.5, 0]} />
+        <meshStandardMaterial
+          color="#fef08a"
+          emissive="#f59e0b"
+          emissiveIntensity={2.0}
+        />
+      </mesh>
+      {showLabel && (
+        <Html center distanceFactor={195} position={[0, 12.2, 0]}>
+          <div className="pointer-events-none whitespace-nowrap rounded-lg border border-amber-300/80 bg-amber-950/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.55)]">
+            MY SEAT • {seat.normalizedLabel} (L{seat.level})
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
 function CameraRig({
   cameraRequest,
   userPosition,
+  seatLocation,
 }: {
   cameraRequest: CameraTargetSpec;
   userPosition?: UserPosition3D | null;
+  seatLocation?: DetectedSeatLocation | null;
 }) {
   const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null);
   const { camera } = useThree();
   const animatingRef = useRef(false);
   const goalPosRef = useRef(new THREE.Vector3(0, 155, 225));
   const goalTargetRef = useRef(new THREE.Vector3(0, 8, 0));
+  const userPosRef = useRef(userPosition);
+  const seatRef = useRef(seatLocation);
+
+  userPosRef.current = userPosition;
+  seatRef.current = seatLocation;
 
   useEffect(() => {
+    if (cameraRequest.id === 0) return;
     const preset = cameraRequest.preset;
     if (preset === "aerial") {
       goalPosRef.current.set(0, 155, 225);
@@ -536,17 +593,16 @@ function CameraRig({
     } else if (preset === "exits") {
       goalPosRef.current.set(-160, 120, 165);
       goalTargetRef.current.set(0, 4, 0);
-    } else if (preset === "follow_me" && userPosition) {
-      const [ux, uy, uz] = toThree(
-        userPosition.x,
-        userPosition.y,
-        userPosition.z
-      );
-      goalTargetRef.current.set(ux, uy + 4, uz);
-      goalPosRef.current.set(ux + 55, uy + 58, uz + 65);
+    } else if (preset === "follow_me") {
+      const targetPos = userPosRef.current ?? seatRef.current;
+      if (targetPos) {
+        const [ux, uy, uz] = toThree(targetPos.x, targetPos.y, targetPos.z);
+        goalTargetRef.current.set(ux, uy + 4, uz);
+        goalPosRef.current.set(ux + 55, uy + 58, uz + 65);
+      }
     }
     animatingRef.current = true;
-  }, [cameraRequest, userPosition]);
+  }, [cameraRequest.id, cameraRequest.preset]);
 
   useFrame((_, delta) => {
     if (!animatingRef.current || !controlsRef.current) return;
@@ -587,6 +643,7 @@ export function HologramSceneContent({
   incidents,
   guidance,
   userPosition,
+  seatLocation,
   activeFans = [],
   selectedNodeId,
   layerFilter,
@@ -681,7 +738,11 @@ export function HologramSceneContent({
       <pointLight position={[-120, 80, 120]} intensity={0.9} color="#06b6d4" />
       <pointLight position={[120, 80, -120]} intensity={0.9} color="#10b981" />
 
-      <CameraRig cameraRequest={cameraRequest} userPosition={userPosition} />
+      <CameraRig
+        cameraRequest={cameraRequest}
+        userPosition={userPosition}
+        seatLocation={seatLocation}
+      />
 
       {/* Clickable Holographic Radar Ground Plane */}
       <mesh
@@ -915,6 +976,11 @@ export function HologramSceneContent({
           </mesh>
         );
       })}
+
+      {/* Detected Seat Marker */}
+      {seatLocation && (
+        <SeatMarker3D seat={seatLocation} showLabel={showLabels} />
+      )}
 
       {/* Exact User Location Marker */}
       {userPosition && (

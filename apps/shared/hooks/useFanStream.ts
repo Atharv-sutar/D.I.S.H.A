@@ -49,6 +49,7 @@ export interface UseFanStreamResult {
   connectionStatus: ConnectionStatus;
   lastUpdatedAt: string | null;
   requestGuidance: (params: RoutingQueryParams) => Promise<void>;
+  setLiveUserPosition: (pos: UserPosition3D) => void;
   setUserCoordinates: (
     x: number,
     y: number,
@@ -326,6 +327,7 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
     connectionStatus,
     lastUpdatedAt,
     requestGuidance: (params) => runGuidance(params),
+    setLiveUserPosition: setUserPosition,
     setUserCoordinates,
   };
 }

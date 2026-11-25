@@ -13,7 +13,7 @@
 - **3D Stadium Hologram (`apps/`, one-time user override)**:
   - Installed `three`, `@types/three`, `@react-three/fiber@^8.17.10`, `@react-three/drei@^9.117.3` in `apps/ops-dashboard/` and `apps/fan-app/`.
   - Upgraded `apps/shared/` (`contracts.ts`, `ws.ts`, `apiClient.ts`, `stadiumData.ts`, `simulator.ts`, `congestion.ts`, `useFanStream.ts`, `useOpsStream.ts`) to `chinnaswamy_bengaluru`.
-  - Built interactive 3D M. Chinnaswamy Stadium Hologram (`apps/shared/components/StadiumHologram3D.tsx` & `apps/shared/components/hologram/HologramSceneContent.tsx`) with orbit/zoom/pan controls, camera presets, tiered holographic stand sectors, floodlights, solar canopy, live congestion columns, dedicated EXIT arches, exact user 3D location + Move My Location floor click, floating 3D incident beacons, and animated particle `waypoints_3d` trails.
+  - Built interactive 3D M. Chinnaswamy Stadium Hologram (`apps/shared/components/StadiumHologram3D.tsx` & `apps/shared/components/hologram/HologramSceneContent.tsx`) with orbit/zoom/pan controls, explicit `Reset View` camera button (no auto-reset on telemetry ticks), seat ticket parser & 3D seat beacon (`apps/shared/lib/seatMapper.ts`), and simulated 3D walking along `waypoints_3d` (`apps/shared/hooks/useWalkSimulator.ts`) that locks the user's current position to their seat upon arrival.
   - Integrated into `apps/fan-app` and `apps/ops-dashboard` (`typecheck`, `lint`, `build` passing on both).
 
 ## Active Interfaces Provided
