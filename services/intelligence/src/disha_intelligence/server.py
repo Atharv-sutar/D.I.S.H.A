@@ -118,6 +118,19 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                 self._send_json(HTTPStatus.OK, snap)
                 return
 
+            if path == "/simulation/status":
+                with runtime.lock:
+                    payload = {
+                        "venue_id": runtime.simulator.topology.venue_id,
+                        "event_phase": runtime.simulator.event_phase,
+                        "tick_count": runtime.simulator._tick_count,
+                        "bottlenecked_nodes": {
+                            nid: bn.severity for nid, bn in runtime.simulator._bottlenecks.items()
+                        },
+                    }
+                self._send_json(HTTPStatus.OK, payload)
+                return
+
             if path == "/forecast":
                 with runtime.lock:
                     tel_map = {n.node_id: n for n in runtime.latest_snapshot.nodes}
@@ -209,6 +222,16 @@ def _make_handler(runtime: IntelligenceRuntime) -> type[BaseHTTPRequestHandler]:
                     return
                 runtime.set_phase(phase)
                 self._send_json(HTTPStatus.OK, {"phase": phase})
+                return
+
+            if path == "/simulation/reset":
+                with runtime.lock:
+                    runtime.simulator.set_phase("pre_event_ingress")
+                    runtime.simulator.sync_bottlenecks({})
+                    snap = runtime.simulator.step()
+                    runtime.latest_snapshot = snap
+                    runtime.latest_incidents = []
+                self._send_json(HTTPStatus.OK, snap.model_dump(mode="json"))
                 return
 
             if path == "/simulation/bottleneck":

@@ -142,10 +142,10 @@ class CrowdSimulator:
         severity: float = 0.92,
         duration_ticks: int | None = None,
     ) -> None:
-        """Inject a localized bottleneck on a node."""
+        """Inject a localized bottleneck override on a node."""
         if node_id not in self._node_map:
             raise KeyError(f"Unknown node_id: {node_id}")
-        clamped = float(min(1.0, max(0.5, severity)))
+        clamped = float(min(1.0, max(0.0, severity)))
         self._bottlenecks[node_id] = _BottleneckConfig(
             severity=clamped,
             remaining_ticks=duration_ticks,
@@ -154,6 +154,15 @@ class CrowdSimulator:
     def clear_bottleneck(self, node_id: str) -> None:
         """Remove an injected bottleneck from a node."""
         self._bottlenecks.pop(node_id, None)
+
+    def sync_bottlenecks(self, bottlenecks: dict[str, float]) -> None:
+        """Synchronize active bottlenecks to match an external control map."""
+        for node_id in list(self._bottlenecks):
+            if node_id not in bottlenecks:
+                del self._bottlenecks[node_id]
+        for node_id, severity in bottlenecks.items():
+            if node_id in self._node_map:
+                self.inject_bottleneck(node_id, severity=severity, duration_ticks=None)
 
     def step(self) -> TelemetrySnapshot:
         """Advance the simulation by one tick and emit a TelemetrySnapshot."""
@@ -176,12 +185,12 @@ class CrowdSimulator:
                 target_ratio = 0.0
             elif node.id in self._bottlenecks:
                 bn = self._bottlenecks[node.id]
-                target_ratio = max(target_ratio, bn.severity)
+                target_ratio = bn.severity
 
             target_occ = round(target_ratio * node.capacity)
             prev_occ = self._prev_occupancy.get(node.id, target_occ)
-            # Smooth transition between ticks unless bottlenecked
-            alpha = 0.55 if node.id in self._bottlenecks else 0.35
+            # Respond rapidly to injected bottlenecks so control panel changes reflect immediately
+            alpha = 0.85 if node.id in self._bottlenecks else 0.35
             occupancy = max(0, round((1.0 - alpha) * prev_occ + alpha * target_occ))
             if node.status == "closed":
                 occupancy = 0

@@ -62,3 +62,46 @@ def test_publisher_posts_telemetry_and_incidents() -> None:
     urls = [u for u, _ in posted]
     assert "http://testserver/api/v1/telemetry/ingest" in urls
     assert "http://testserver/api/v1/incidents" in urls
+
+
+def test_publisher_syncs_control_state_from_backend() -> None:
+    control_state = {
+        "event_phase": "halftime_surge",
+        "bottlenecked_nodes": {"concession_east_plaza": 0.95},
+    }
+    ingested: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and str(request.url).endswith("/api/v1/simulation/status"):
+            return httpx.Response(200, json=control_state)
+        if request.method == "POST" and str(request.url).endswith("/api/v1/telemetry/ingest"):
+            ingested.append(json.loads(request.content.decode()))
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(200, json={"ok": True})
+
+    config = PublisherConfig(
+        ingest_url="http://testserver/api/v1/telemetry/ingest",
+        incidents_url="http://testserver/api/v1/incidents",
+        status_url="http://testserver/api/v1/simulation/status",
+        tick_interval_seconds=0.1,
+        random_seed=42,
+    )
+    publisher = SimulationPublisher(config=config)
+
+    async def _run() -> None:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            snap1, _ = await publisher.publish_tick(client)
+            assert snap1.event_phase == "halftime_surge"
+            east = next(n for n in snap1.nodes if n.node_id == "concession_east_plaza")
+            assert east.congestion_score >= 0.80
+
+            # Clear bottleneck in backend control state -> publisher clears it too
+            control_state["bottlenecked_nodes"] = {}
+            control_state["event_phase"] = "in_play"
+            snap2, _ = await publisher.publish_tick(client)
+            assert snap2.event_phase == "in_play"
+            assert "concession_east_plaza" not in publisher.simulator._bottlenecks
+
+    asyncio.run(_run())
+    assert len(ingested) == 2

@@ -26,19 +26,27 @@ class PublisherConfig:
 
     ingest_url: str = "http://localhost:8000/api/v1/telemetry/ingest"
     incidents_url: str = "http://localhost:8000/api/v1/incidents"
+    status_url: str = "http://localhost:8000/api/v1/simulation/status"
     tick_interval_seconds: float = 2.0
     random_seed: int = 42
 
     @classmethod
     def from_env(cls) -> PublisherConfig:
         """Load publisher configuration from environment variables."""
+        ingest_url = os.getenv(
+            "BACKEND_INGEST_URL", "http://localhost:8000/api/v1/telemetry/ingest"
+        )
+        default_status_url = (
+            ingest_url.rsplit("/api/v1/", 1)[0] + "/api/v1/simulation/status"
+            if "/api/v1/" in ingest_url
+            else "http://localhost:8000/api/v1/simulation/status"
+        )
         return cls(
-            ingest_url=os.getenv(
-                "BACKEND_INGEST_URL", "http://localhost:8000/api/v1/telemetry/ingest"
-            ),
+            ingest_url=ingest_url,
             incidents_url=os.getenv(
                 "BACKEND_INCIDENTS_URL", "http://localhost:8000/api/v1/incidents"
             ),
+            status_url=os.getenv("BACKEND_SIM_STATUS_URL", default_status_url),
             tick_interval_seconds=float(os.getenv("TICK_INTERVAL_SECONDS", "2.0")),
             random_seed=int(os.getenv("RANDOM_SEED", "42")),
         )
@@ -64,10 +72,33 @@ class SimulationPublisher:
             tick_seconds=self.simulator._tick_seconds
         )
 
+    async def sync_control_state(self, client: httpx.AsyncClient) -> None:
+        """Pull active phase & bottleneck overrides from backend so Sim Studio stays authoritative."""
+        try:
+            resp = await client.get(self.config.status_url)
+            if resp.status_code != 200:
+                return
+            data = resp.json()
+            phase = data.get("event_phase")
+            if phase in ("pre_event_ingress", "in_play", "halftime_surge", "egress", "idle"):
+                self.simulator.set_phase(phase)
+            bottlenecks = data.get("bottlenecked_nodes")
+            if isinstance(bottlenecks, dict):
+                parsed = {
+                    str(k): float(v)
+                    for k, v in bottlenecks.items()
+                    if isinstance(v, (int, float))
+                }
+                self.simulator.sync_bottlenecks(parsed)
+        except (httpx.HTTPError, ValueError, TypeError):
+            return
+
     async def publish_tick(
-        self, client: httpx.AsyncClient
+        self, client: httpx.AsyncClient, sync_state: bool = True
     ) -> tuple[TelemetrySnapshot, list[AlertIncident]]:
-        """Advance one simulation tick, detect incidents, and POST to backend."""
+        """Sync control state, advance one tick, detect incidents, and POST to backend."""
+        if sync_state:
+            await self.sync_control_state(client)
         snapshot = self.simulator.step()
         self.forecaster.record(snapshot)
         forecasts = self.forecaster.forecast_all()
