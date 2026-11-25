@@ -718,5 +718,32 @@ class StadiumStateStore:
             confidence=existing.confidence,
         )
         self.incidents[incident_id] = updated
+        if patch.status == "dispatched":
+            self._bottleneck_overrides.pop(existing.node_id, None)
+            self._cleared_nodes.add(existing.node_id)
+            for node_telem in self.latest_telemetry.nodes:
+                if node_telem.node_id == existing.node_id:
+                    relieved = round(max(0.18, min(0.28, node_telem.congestion_score * 0.35)), 3)
+                    node_telem.congestion_score = relieved
+                    node_telem.occupancy = int(round(node_telem.capacity * relieved))
+                    node_telem.queue_length = max(0, int(round(node_telem.occupancy * 0.08)))
+                    node_telem.estimated_wait_min = round(
+                        node_telem.queue_length / max(8.0, node_telem.capacity * 0.03), 1
+                    )
+                    node_telem.trend = "falling"
+                    node_telem.status = _score_to_status(relieved)
+                    break
+        elif patch.status == "resolved":
+            self._bottleneck_overrides.pop(existing.node_id, None)
+            self._cleared_nodes.add(existing.node_id)
+            for node_telem in self.latest_telemetry.nodes:
+                if node_telem.node_id == existing.node_id and node_telem.congestion_score > 0.32:
+                    node_telem.congestion_score = 0.22
+                    node_telem.occupancy = int(round(node_telem.capacity * 0.22))
+                    node_telem.queue_length = 0
+                    node_telem.estimated_wait_min = 1.0
+                    node_telem.trend = "falling"
+                    node_telem.status = "optimal"
+                    break
         self._apply_snapshot(self.latest_telemetry, mark_external=False)
         return updated

@@ -275,6 +275,9 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
             setLastUpdatedAt(msg.timestamp || new Date().toISOString());
             if (msg.event === "wait_times_update") {
               setTelemetry(msg.payload);
+              void fetchIncidents()
+                .then((latestIncs) => setIncidents(latestIncs))
+                .catch(() => undefined);
             } else {
               const item: FanAdvisoryItem = {
                 ...msg.payload,
@@ -282,6 +285,9 @@ export function useFanStream(initialParams: RoutingQueryParams): UseFanStreamRes
                 timestamp: msg.timestamp || new Date().toISOString(),
               };
               setAdvisories((prev) => [item, ...prev].slice(0, 8));
+              void fetchIncidents()
+                .then((latestIncs) => setIncidents(latestIncs))
+                .catch(() => undefined);
             }
           } catch {
             // Ignore malformed WS frame

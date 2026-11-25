@@ -329,11 +329,14 @@ def create_app() -> FastAPI:
 
     @application.patch("/api/v1/incidents/{incident_id}", response_model=AlertIncident, tags=["incidents"])
     async def patch_incident(incident_id: str, patch: IncidentPatchRequest) -> AlertIncident:
-        """Update incident triage/dispatch state and notify Ops Dashboard clients."""
+        """Update incident triage/dispatch state and notify all connected stakeholders."""
         try:
             updated = store.update_incident(incident_id, patch)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+        if patch.status in ("dispatched", "resolved"):
+            await intel_client.set_bottleneck(node_id=updated.node_id, clear=True)
+            await _broadcast_telemetry(store.latest_telemetry)
         await ws_manager.broadcast("ops", "incident_updated", model_to_dict(updated))
         return updated
 
@@ -420,6 +423,9 @@ def create_app() -> FastAPI:
     @application.post("/api/v1/simulation/reset", response_model=TelemetrySnapshot, tags=["simulation"])
     async def reset_simulation() -> TelemetrySnapshot:
         """Reset bottlenecks and restore baseline stadium telemetry & seed incidents."""
+        for node in store.topology.nodes:
+            await intel_client.set_bottleneck(node_id=node.id, clear=True)
+        await intel_client.set_phase("pre_event_ingress")
         updated, incidents = store.reset_demo_state()
         await _broadcast_telemetry(updated)
         for inc in incidents:
@@ -433,6 +439,9 @@ def create_app() -> FastAPI:
             updated, created_incidents = store.apply_demo_preset(req.preset)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await intel_client.set_phase(updated.event_phase)
+        for node_id, sev in store._bottleneck_overrides.items():
+            await intel_client.set_bottleneck(node_id=node_id, severity=sev, clear=False)
         await _broadcast_telemetry(updated)
         for inc in created_incidents:
             await ws_manager.broadcast("ops", "incident_created", model_to_dict(inc))

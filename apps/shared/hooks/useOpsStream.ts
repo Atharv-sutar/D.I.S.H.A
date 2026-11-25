@@ -243,23 +243,45 @@ export function useOpsStream(): UseOpsStreamResult {
         )
       );
 
-      if (connectionStatus === "live") {
-        try {
-          const confirmed = await patchIncident(incidentId, {
-            status,
-            assigned_team: assignedTeam,
-          });
-          setIncidents((prev) =>
-            prev.map((inc) =>
-              inc.incident_id === incidentId ? confirmed : inc
-            )
-          );
-        } catch {
-          // Keep optimistic state if backend call fails transiently
+      if (status === "dispatched" || status === "resolved") {
+        const targetInc = incidents.find((i) => i.incident_id === incidentId);
+        if (targetInc) {
+          setTelemetry((prev) => ({
+            ...prev,
+            timestamp: updatedAt,
+            nodes: prev.nodes.map((n) =>
+              n.node_id === targetInc.node_id
+                ? {
+                    ...n,
+                    congestion_score: 0.24,
+                    occupancy: Math.round(n.capacity * 0.24),
+                    queue_length: 8,
+                    estimated_wait_min: 1.2,
+                    trend: "falling",
+                    pulse_intensity: 0.24,
+                    status: "optimal",
+                  }
+                : n
+            ),
+          }));
         }
       }
+
+      try {
+        const confirmed = await patchIncident(incidentId, {
+          status,
+          assigned_team: assignedTeam,
+        });
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.incident_id === incidentId ? confirmed : inc
+          )
+        );
+      } catch {
+        // Keep optimistic state if backend is offline
+      }
     },
-    [connectionStatus]
+    [incidents]
   );
 
   const simulateCrowdSurge = useCallback(
@@ -311,23 +333,21 @@ export function useOpsStream(): UseOpsStreamResult {
 
       setIncidents((prev) => [newIncident, ...prev]);
 
-      if (connectionStatus === "live") {
-        try {
-          await controlBottleneck({ node_id: nodeId, severity, clear: false });
-          await createIncident({
-            category: "crowd_bottleneck",
-            severity: severity >= 0.85 ? "critical" : "high",
-            node_id: nodeId,
-            title: newIncident.title,
-            description: newIncident.description,
-            recommended_action: newIncident.recommended_action,
-          });
-        } catch {
-          // Local simulation state remains active
-        }
+      try {
+        await controlBottleneck({ node_id: nodeId, severity, clear: false });
+        await createIncident({
+          category: "crowd_bottleneck",
+          severity: severity >= 0.85 ? "critical" : "high",
+          node_id: nodeId,
+          title: newIncident.title,
+          description: newIncident.description,
+          recommended_action: newIncident.recommended_action,
+        });
+      } catch {
+        // Local simulation state remains active if backend is offline
       }
     },
-    [connectionStatus]
+    []
   );
 
   const clearCrowdSurge = useCallback(

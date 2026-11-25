@@ -287,6 +287,22 @@ class BackendFoundationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(preset_snap["event_phase"], "in_play")
 
+        status, dispatched_inc = _run_asgi_request(
+            self.app,
+            "PATCH",
+            "/api/v1/incidents/inc_gate1_surge",
+            body={"status": "dispatched", "assigned_team": "Gate Alpha Squad"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(dispatched_inc["status"], "dispatched")
+        status, post_dispatch_telem = _run_asgi_request(self.app, "GET", "/api/v1/telemetry/latest")
+        self.assertEqual(status, 200)
+        gate1_after = next(
+            n for n in post_dispatch_telem["nodes"] if n["node_id"] == "gate_1_cubbon"
+        )
+        self.assertLessEqual(gate1_after["congestion_score"], 0.35)
+        self.assertEqual(gate1_after["status"], "optimal")
+
         status, clear_all_snap = _run_asgi_request(
             self.app,
             "POST",
